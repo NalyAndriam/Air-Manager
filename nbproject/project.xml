@@ -8,6 +8,9 @@
             <web-module-libraries>
                 <library dirs="200">
                     <file>${file.reference.ember_mvc.jar}</file>
+                </library>
+                <library dirs="200">
+                    <file>${file.reference.ember-mvc-1.0.0.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library dirs="200">
