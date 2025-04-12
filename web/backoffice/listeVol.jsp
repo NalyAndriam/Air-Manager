@@ -3,6 +3,7 @@
 <%
     List<Vol> vols = (List<Vol>) request.getAttribute("vols");
     List<Ville> villes = (List<Ville>) request.getAttribute("villes");
+    String errorMessage = (String) request.getAttribute("errorMessage");
 %>
 <!DOCTYPE html>
 <html lang="fr">
@@ -24,25 +25,32 @@
                 <h1>Liste des vols</h1>
             </div>
             
+            <!-- Affichage des erreurs -->
+            <% if (errorMessage != null) { %>
+                <div class="error-message" style="color: red; font-size: smaller;">
+                    <i class="fa-solid fa-exclamation-circle" ></i> <%= errorMessage %>
+                </div>
+            <% } %>
+            
             <!-- Section de recherche multi-critères -->
             <div class="search-section">
                 <h2><i class="fa-solid fa-search"></i> Rechercher un vol</h2>
-                <form action="<%= request.getContextPath() %>/vol/search" method="GET" class="search-form">
+                <form action="<%= request.getContextPath() %>/vol" method="GET" class="search-form">
                     <div class="search-grid">
                         <div class="search-item">
-                            <label for="villeDepart">Ville de depart:</label>
-                            <select id="villeDepart" name="villeDepart" required>
+                            <label for="villeDepart">Ville de depart :</label>
+                            <select id="villeDepart" name="villeDepart">
                                 <option value="0">Selectionner une ville de depart</option>
-                                <% for(Ville ville : villes) { %>
+                                <% for (Ville ville : villes) { %>
                                     <option value="<%= ville.getId() %>"><%= ville.getNom() %></option>
                                 <% } %>
                             </select>
                         </div>
                         <div class="search-item">
-                            <label for="villeArrivee">Ville d'Arrivee:</label>
-                            <select id="villeArrivee" name="villeArrivee" required>
+                            <label for="villeArrivee">Ville d'arrivee :</label>
+                            <select id="villeArrivee" name="villeArrivee">
                                 <option value="0">Selectionner une ville d'arrivee</option>
-                                <% for(Ville ville : villes) { %>
+                                <% for (Ville ville : villes) { %>
                                     <option value="<%= ville.getId() %>"><%= ville.getNom() %></option>
                                 <% } %>
                             </select>
@@ -56,12 +64,12 @@
                             <input type="date" id="dateArrivee" name="dateArrivee">
                         </div>
                         <div class="search-item">
-                            <label for="prixMin">Prix Minimum</label>
-                            <input type="number" id="prixMin" name="prixMin" placeholder="Saisir un prix">
+                            <label for="prixMin">Prix minimum</label>
+                            <input type="number" id="prixMin" name="prixMin" placeholder="Saisir un prix" step="0.01">
                         </div>
                         <div class="search-item">
-                            <label for="prixMax">Prix Maximum</label>
-                            <input type="number" id="prixMax" name="prixMax" placeholder="Saisir un prix">
+                            <label for="prixMax">Prix maximum</label>
+                            <input type="number" id="prixMax" name="prixMax" placeholder="Saisir un prix" step="0.01">
                         </div>
                     </div>
                     <div class="search-actions">
@@ -86,23 +94,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <% for (Vol vol : vols) { %>
+                    <% if (vols != null && !vols.isEmpty()) { %>
+                        <% for (Vol vol : vols) { %>
+                            <tr>
+                                <td><%= vol.getVilleDepart().getNom() %></td>
+                                <td><%= vol.getVilleArrivee().getNom() %></td>
+                                <td><%= vol.getDepart() %></td>
+                                <td><%= vol.getArrivee() %></td>
+                                <td>
+                                    <a href="<%= request.getContextPath() %>/vol/detail?id=<%= vol.getId() %>" class="action-btn">
+                                        <i class="fa-solid fa-eye"></i> Voir
+                                    </a>
+                                    <a href="<%= request.getContextPath() %>/vol/edit?id=<%= vol.getId() %>" class="action-btn">
+                                        <i class="fa-solid fa-pen"></i> Modifier
+                                    </a>
+                                    <a href="<%= request.getContextPath() %>/vol/delete?id=<%= vol.getId() %>" class="action-btn" onclick="return confirm('Supprimer ce vol ?')">
+                                        <i class="fa-solid fa-trash"></i> Supprimer
+                                    </a>
+                                </td>
+                            </tr>
+                        <% } %>
+                    <% } else { %>
                         <tr>
-                            <td><%= vol.getVilleDepart().getNom() %></td>
-                            <td><%= vol.getVilleArrivee().getNom() %></td>
-                            <td><%= vol.getDepart() %></td>
-                            <td><%= vol.getArrivee() %></td>
-                            <td>
-                                <a href="<%= request.getContextPath() %>/vol/detail?id=<%= vol.getId() %>" class="action-btn">
-                                    <i class="fa-solid fa-eye"></i> Voir
-                                </a>
-                                <a href="<%= request.getContextPath() %>/vol/edit?id=<%= vol.getId() %>" class="action-btn">
-                                    <i class="fa-solid fa-pen"></i> Modifier
-                                </a>
-                                <a href="<%= request.getContextPath() %>/vol/delete?id=<%= vol.getId() %>" class="action-btn" onclick="return confirm('Supprimer ce vol ?')">
-                                    <i class="fa-solid fa-trash"></i> Supprimer
-                                </a>
-                            </td>
+                            <td colspan="5">Aucun vol trouve.</td>
                         </tr>
                     <% } %>
                 </tbody>

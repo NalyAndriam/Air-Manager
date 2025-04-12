@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -199,5 +201,103 @@ public class Vol {
         return vols;
     }
 
+    public static List<Vol> search(Connection connex, int idVilleDepart, int idVilleArrivee, 
+                               String dateDepart, String dateArrivee, 
+                               double prixMin, double prixMax) throws Exception {
+        PreparedStatement st = null;
+        ResultSet res = null;
+        boolean creatingConn = false;
+        List<Vol> all = new ArrayList<>();
 
+        try {
+            if (connex == null) {
+                connex = Database.getConnection();
+                creatingConn = true;
+            }
+
+            StringBuilder sql = new StringBuilder("SELECT v.* FROM v_volPrix v WHERE 1=1");
+
+            // Ajout des conditions dynamiques
+            if (idVilleDepart > 0) {
+                sql.append(" AND id_ville_depart = ?");
+            }
+            if (idVilleArrivee > 0) {
+                sql.append(" AND id_ville_arrivee = ?");
+            }
+            if (dateDepart != null && !dateDepart.isEmpty()) {
+                sql.append(" AND DATE(depart) = ?");
+            }
+            if (dateArrivee != null && !dateArrivee.isEmpty()) {
+                sql.append(" AND DATE(arrivee) = ?");
+            }
+            if (prixMin > 0) {
+                sql.append(" AND prix_min >= ?");
+            }
+            if (prixMax > 0) {
+                sql.append(" AND prix_max <= ?");
+            }
+
+            System.out.println("Requête SQL : " + sql);
+
+            st = connex.prepareStatement(sql.toString());
+
+            // Paramétrage des valeurs
+            int paramIndex = 1;
+            if (idVilleDepart > 0) {
+                st.setInt(paramIndex++, idVilleDepart);
+            }
+            if (idVilleArrivee > 0) {
+                st.setInt(paramIndex++, idVilleArrivee);
+            }
+            if (dateDepart != null && !dateDepart.isEmpty()) {
+                st.setDate(paramIndex++, java.sql.Date.valueOf(dateDepart));
+            }
+            if (dateArrivee != null && !dateArrivee.isEmpty()) {
+                st.setDate(paramIndex++, java.sql.Date.valueOf(dateArrivee));
+            }
+            if (prixMin > 0) {
+                st.setDouble(paramIndex++, prixMin);
+            }
+            if (prixMax > 0) {
+                st.setDouble(paramIndex++, prixMax);
+            }
+
+            System.out.println("Exécution de la requête...");
+            res = st.executeQuery();
+            while (res.next()) {
+                Vol vol = new Vol();
+                vol.setId(res.getInt("id"));
+
+                // Récupération des objets liés
+                vol.setAvion(Avion.getById(connex, res.getInt("id_avion")));
+                vol.setVilleDepart(Ville.getById(connex, res.getInt("id_ville_depart")));
+                vol.setVilleArrivee(Ville.getById(connex, res.getInt("id_ville_arrivee")));
+
+                vol.setDepart(res.getTimestamp("depart"));
+                vol.setArrivee(res.getTimestamp("arrivee"));
+
+                all.add(vol);
+            }
+            System.out.println("Nombre de vols trouvés : " + all.size());
+
+        } catch (SQLException e) {
+            System.err.println("Erreur SQL dans Vol.search : " + e.getMessage());
+            throw e;
+        } catch (IllegalArgumentException e) {
+            System.err.println("Erreur de format de date dans Vol.search : " + e.getMessage());
+            throw new SQLException("Format de date invalide", e);
+        } finally {
+            if (res != null) try { res.close(); } catch (SQLException e) { e.printStackTrace(); }
+            if (st != null) try { st.close(); } catch (SQLException e) { e.printStackTrace(); }
+            if (creatingConn && connex != null) try { connex.close(); } catch (SQLException e) { e.printStackTrace(); }
+        }
+        return all;
+    }
+
+
+    public static void main(String[] args) throws Exception {
+        Connection conn= Database.getConnection();
+        List<Vol> vols= Vol.search(conn, 0, 0, "11-04-2025", null, 0, 0);
+        System.out.println(vols.size());
+    }
 }

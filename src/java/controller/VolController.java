@@ -3,6 +3,9 @@ package controller;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.crypto.Data;
@@ -135,16 +138,103 @@ public class VolController {
 
     @Get
     @Url("/vol")
-    public ModelView flightList() throws Exception{
-        Connection conn= Database.getConnection();
-
+    public ModelView flightList(
+            @RequestParameter("villeDepart") Integer idVilleDepart,
+            @RequestParameter("villeArrivee") Integer idVilleArrivee,
+            @RequestParameter("dateDepart") String dateDepart,
+            @RequestParameter("dateArrivee") String dateArrivee,
+            @RequestParameter("prixMin") String prixMin,
+            @RequestParameter("prixMax") String prixMax
+    ) throws Exception {
+        Connection conn = null;
         ModelView mv = new ModelView();
-        List<Vol> vols= Vol.getAll(conn);
-        List<Ville> villes= Ville.getAll(conn);
+        List<Vol> vols = new ArrayList<>();
+        List<Ville> villes = new ArrayList<>();
+
+        try {
+            conn = Database.getConnection();
+            System.out.println("Connexion à la base de données établie");
+
+            // Chargement des villes
+            villes = Ville.getAll(conn);
+            if (villes == null) {
+                villes = new ArrayList<>();
+                mv.addObject("errorMessage", "Impossible de charger la liste des villes.");
+            }
+            System.out.println("Villes chargées : " + villes.size());
+
+            // Vérifie si tous les champs sont vides
+            boolean isSearchEmpty = 
+                (idVilleDepart == null || idVilleDepart == 0) &&
+                (idVilleArrivee == null || idVilleArrivee == 0) &&
+                (dateDepart == null || dateDepart.trim().isEmpty()) &&
+                (dateArrivee == null || dateArrivee.trim().isEmpty()) &&
+                (prixMin == null || prixMin.trim().isEmpty()) &&
+                (prixMax == null || prixMax.trim().isEmpty());
+
+            if (isSearchEmpty) {
+                System.out.println("Aucun critère de recherche, chargement de tous les vols...");
+                vols = Vol.getAll(conn);
+            } else {
+                System.out.println("Recherche avec critères : villeDepart=" + idVilleDepart + ", villeArrivee=" + idVilleArrivee);
+
+                // Conversion des paramètres
+                int villeDepartId = idVilleDepart != null ? idVilleDepart : 0;
+                int villeArriveeId = idVilleArrivee != null ? idVilleArrivee : 0;
+
+                double minPrix = 0.0;
+                if (prixMin != null && !prixMin.trim().isEmpty()) {
+                    try {
+                        minPrix = Double.parseDouble(prixMin);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Prix minimum non valide : " + prixMin);
+                    }
+                }
+
+                double maxPrix = 0.0;
+                if (prixMax != null && !prixMax.trim().isEmpty()) {
+                    try {
+                        maxPrix = Double.parseDouble(prixMax);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Prix maximum non valide : " + prixMax);
+                    }
+                }
+
+                // Pas de validation supplémentaire des dates ici, déléguer à Vol.search
+                vols = Vol.search(conn, villeDepartId, villeArriveeId, dateDepart, dateArrivee, minPrix, maxPrix);
+                System.out.println("Recherche terminée : " + vols.size() + " vols trouvés");
+            }
+
+            if (vols == null) {
+                vols = new ArrayList<>();
+                mv.addObject("errorMessage", "Aucun vol trouvé ou erreur lors de la récupération des vols.");
+            }
+
+        } catch (SQLException e) {
+            mv.addObject("errorMessage", "Erreur SQL lors de la récupération des données : " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            mv.addObject("errorMessage", "Erreur inattendue : " + e.getClass().getName() + " - " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                    System.out.println("Connexion fermée");
+                } catch (SQLException e) {
+                    mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion : " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+
         mv.addObject("vols", vols);
         mv.addObject("villes", villes);
         mv.setUrl("/backoffice/listeVol.jsp");
+
         return mv;
     }
+
+
 
 }

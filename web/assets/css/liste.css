@@ -1,0 +1,274 @@
+/* Style général de la page */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+.main-content {
+    margin-left: 250px; /* Ajuster selon la largeur de votre sidebar */
+    padding: 20px;
+    transition: margin-left 0.3s;
+}
+
+/* Container principal */
+.container {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 25px;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+/* En-tête de la page */
+.header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.header-icon {
+    font-size: 24px;
+    color: #d32f2f;
+    margin-right: 15px;
+}
+
+.header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Section de recherche */
+.search-section {
+    background-color: #fdf8f8;
+    border: 1px solid #f5e8e8;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.search-section h2 {
+    font-size: 18px;
+    color: #4e4e4e;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.search-section h2 i {
+    color: #d32f2f;
+    margin-right: 8px;
+}
+
+.search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.search-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.search-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.search-item label {
+    font-size: 14px;
+    color: #555;
+    font-weight: 500;
+}
+
+.search-item input, select {
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border 0.2s;
+}
+
+.search-item input:focus {
+    outline: none;
+    border-color: #d32f2f;
+    box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.1);
+}
+
+.search-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.search-btn, .reset-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.search-btn {
+    background-color: #d32f2f;
+    color: white;
+}
+
+.search-btn:hover {
+    background-color: #b71c1c;
+}
+
+.reset-btn {
+    background-color: #f5f5f5;
+    color: #555;
+}
+
+.reset-btn:hover {
+    background-color: #e0e0e0;
+}
+
+/* Tableau des vols */
+.vol-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.vol-table thead {
+    background-color: #fef5f5;
+}
+
+.vol-table th {
+    padding: 14px 20px;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    font-size: 14px;
+    border-bottom: 2px solid #f5dada;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.vol-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+    font-size: 14px;
+}
+
+.vol-table tbody tr:hover {
+    background-color: #fff9f9;
+}
+
+.vol-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Boutons d'action */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    margin-right: 8px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.action-btn:nth-child(1) {
+    background-color: #fef2f2;
+    color: #d32f2f;
+}
+
+.action-btn:nth-child(2) {
+    background-color: #f9e6e6;
+    color: #b71c1c;
+}
+
+.action-btn:nth-child(3) {
+    background-color: #ffdede;
+    color: #d32f2f;
+}
+
+.action-btn:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+.action-btn i {
+    margin-right: 5px;
+    font-size: 12px;
+}
+
+/* Design responsive */
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .container {
+        margin: 10px;
+        padding: 15px;
+    }
+    
+    .vol-table {
+        overflow-x: auto;
+        display: block;
+    }
+    
+    .search-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .vol-table th,
+    .vol-table td {
+        padding: 10px;
+    }
+    
+    .action-btn {
+        padding: 5px 8px;
+        font-size: 12px;
+    }
+    
+    .search-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .search-btn, .reset-btn {
+        width: 100%;
+    }
+}
+
+/* Style pour montrer qu'il n'y a pas de vols si la liste est vide */
+.vol-table tbody:empty::after {
+    content: "Aucun vol disponible";
+    display: block;
+    padding: 20px;
+    text-align: center;
+    color: #777;
+    font-style: italic;
+}
