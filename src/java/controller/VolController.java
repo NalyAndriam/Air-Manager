@@ -5,6 +5,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
+import javax.xml.crypto.Data;
+
 import mg.emberframework.annotation.http.Controller;
 import mg.emberframework.annotation.http.Get;
 import mg.emberframework.annotation.http.Post;
@@ -134,10 +136,14 @@ public class VolController {
     @Get
     @Url("/vol")
     public ModelView flightList() throws Exception{
+        Connection conn= Database.getConnection();
+
         ModelView mv = new ModelView();
-        //List<Flight> flights = Flight.readFlights();
-        //mv.addObject("flights", flights);
-        mv.setUrl("/backoffice/succes.jsp");
+        List<Vol> vols= Vol.getAll(conn);
+        List<Ville> villes= Ville.getAll(conn);
+        mv.addObject("vols", vols);
+        mv.addObject("villes", villes);
+        mv.setUrl("/backoffice/listeVol.jsp");
         return mv;
     }
 

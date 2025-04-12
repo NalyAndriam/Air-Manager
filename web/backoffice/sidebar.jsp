@@ -12,7 +12,7 @@
             </a>
             <ul class="submenu open">
                 <li><a href="<%= request.getContextPath() %>/vol/insert" class="current">Insertion</a></li>
-                <li><a href="<%= request.getContextPath() %>/flightList">Liste</a></li>
+                <li><a href="<%= request.getContextPath() %>/vol">Liste</a></li>
             </ul>
         </div>
         

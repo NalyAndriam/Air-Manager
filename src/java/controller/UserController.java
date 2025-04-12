@@ -51,7 +51,8 @@ public class UserController {
             String role = utilisateur.getRole().getNom();
             session.add("user", utilisateur);
             if(role.equals("admin")){
-                mv.setUrl("/backoffice/vol.jsp");
+                mv.setRedirect(true);
+                mv.setUrl("./vol");
             }else{
                 mv.setUrl("/frontoffice/vol.jsp");    
             }

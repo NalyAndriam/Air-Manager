@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 import mg.emberframework.annotation.validation.Required;
 
@@ -153,5 +155,49 @@ public class Vol {
 
         return null; // Si aucun résultat trouvé
     }
+
+    public static List<Vol> getAll(Connection connex) throws Exception {
+        PreparedStatement st = null;
+        ResultSet res = null;
+        boolean creatingConn = false;
+        List<Vol> vols = new ArrayList<>();
+
+        try {
+            if (connex == null) {
+                connex = Database.getConnection();
+                creatingConn = true;
+            }
+
+            String sql = "SELECT * FROM Vol";
+            st = connex.prepareStatement(sql);
+            res = st.executeQuery();
+
+            while (res.next()) {
+                Vol vol = new Vol();
+                vol.setId(res.getInt("id"));
+
+                int idAvion = res.getInt("id_avion");
+                int idVilleDepart = res.getInt("id_ville_depart");
+                int idVilleArrivee = res.getInt("id_ville_arrivee");
+
+                vol.setAvion(Avion.getById(connex, idAvion));
+                vol.setVilleDepart(Ville.getById(connex, idVilleDepart));
+                vol.setVilleArrivee(Ville.getById(connex, idVilleArrivee));
+
+                vol.setDepart(res.getTimestamp("depart"));
+                vol.setArrivee(res.getTimestamp("arrivee"));
+
+                vols.add(vol);
+            }
+
+        } finally {
+            if (res != null) res.close();
+            if (st != null) st.close();
+            if (creatingConn && connex != null) connex.close();
+        }
+
+        return vols;
+    }
+
 
 }
