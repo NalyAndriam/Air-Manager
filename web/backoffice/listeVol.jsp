@@ -15,7 +15,6 @@
     <link href="./assets/css/sidebar.css" rel="stylesheet">
 </head>
 <body>
-    
     <%@ include file="sidebar.jsp" %>
     
     <div class="main-content">
@@ -25,33 +24,35 @@
                 <h1>Liste des vols</h1>
             </div>
             
-            <!-- Affichage des erreurs -->
             <% if (errorMessage != null) { %>
                 <div class="error-message" style="color: red; font-size: smaller;">
-                    <i class="fa-solid fa-exclamation-circle" ></i> <%= errorMessage %>
+                    <i class="fa-solid fa-exclamation-circle"></i> <%= errorMessage %>
                 </div>
             <% } %>
             
-            <!-- Section de recherche multi-critères -->
             <div class="search-section">
                 <h2><i class="fa-solid fa-search"></i> Rechercher un vol</h2>
                 <form action="<%= request.getContextPath() %>/vol" method="GET" class="search-form">
                     <div class="search-grid">
                         <div class="search-item">
-                            <label for="villeDepart">Ville de depart :</label>
+                            <label for="villeDepart">Ville de depart:</label>
                             <select id="villeDepart" name="villeDepart">
                                 <option value="0">Selectionner une ville de depart</option>
-                                <% for (Ville ville : villes) { %>
-                                    <option value="<%= ville.getId() %>"><%= ville.getNom() %></option>
+                                <% if (villes != null && !villes.isEmpty()) { %>
+                                    <% for (Ville ville : villes) { %>
+                                        <option value="<%= ville.getId() %>"><%= ville.getNom() %></option>
+                                    <% } %>
                                 <% } %>
                             </select>
                         </div>
                         <div class="search-item">
-                            <label for="villeArrivee">Ville d'arrivee :</label>
+                            <label for="villeArrivee">Ville d'arrivee:</label>
                             <select id="villeArrivee" name="villeArrivee">
                                 <option value="0">Selectionner une ville d'arrivee</option>
-                                <% for (Ville ville : villes) { %>
-                                    <option value="<%= ville.getId() %>"><%= ville.getNom() %></option>
+                                <% if (villes != null && !villes.isEmpty()) { %>
+                                    <% for (Ville ville : villes) { %>
+                                        <option value="<%= ville.getId() %>"><%= ville.getNom() %></option>
+                                    <% } %>
                                 <% } %>
                             </select>
                         </div>
@@ -103,10 +104,7 @@
                                 <td><%= vol.getArrivee() %></td>
                                 <td>
                                     <a href="<%= request.getContextPath() %>/vol/detail?id=<%= vol.getId() %>" class="action-btn">
-                                        <i class="fa-solid fa-eye"></i> Voir details
-                                    </a>
-                                    <a href="<%= request.getContextPath() %>/vol/edit?id=<%= vol.getId() %>" class="action-btn">
-                                        <i class="fa-solid fa-pen"></i> Modifier
+                                        <i class="fa-solid fa-edit"></i> Modifier
                                     </a>
                                     <a href="<%= request.getContextPath() %>/vol/delete?id=<%= vol.getId() %>" class="action-btn" onclick="return confirm('Supprimer ce vol ?')">
                                         <i class="fa-solid fa-trash"></i> Supprimer

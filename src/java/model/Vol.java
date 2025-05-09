@@ -306,6 +306,23 @@ public class Vol {
         }
     }
 
+    public void update(Connection conn) throws SQLException {
+        PreparedStatement st = null;
+        try {
+            String sql = "UPDATE Vol SET id_avion = ?, id_ville_depart = ?, id_ville_arrivee = ?, depart = ?, arrivee = ? WHERE id = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, this.getAvion().getId());
+            st.setInt(2, this.getVilleDepart().getId());
+            st.setInt(3, this.getVilleArrivee().getId());
+            st.setTimestamp(4, this.getDepart());
+            st.setTimestamp(5, this.getArrivee());
+            st.setInt(6, this.getId());
+            st.executeUpdate();
+        } finally {
+            if (st != null) st.close();
+        }
+    }
+
 
     public static void main(String[] args) throws Exception {
         Connection conn= Database.getConnection();

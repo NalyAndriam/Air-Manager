@@ -2,7 +2,10 @@ package model;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PrixVol {
     private int id;
@@ -65,5 +68,31 @@ public class PrixVol {
         } finally {
             if (st != null) st.close();
         }
+    }
+
+    public static List<PrixVol> getByVolId(Connection conn, int volId) throws Exception {
+        PreparedStatement st = null;
+        ResultSet res = null;
+        List<PrixVol> prixVols = new ArrayList<>();
+
+        try {
+            String sql = "SELECT * FROM PrixVol WHERE id_vol = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, volId);
+            res = st.executeQuery();
+
+            while (res.next()) {
+                PrixVol prixVol = new PrixVol();
+                prixVol.setVol(Vol.getById(conn, res.getInt("id_vol")));
+                prixVol.setTypeSiege(TypeSiege.getById(conn, res.getInt("id_typesiege")));
+                prixVol.setPrix(res.getDouble("prix"));
+                prixVols.add(prixVol);
+            }
+        } finally {
+            if (res != null) res.close();
+            if (st != null) st.close();
+        }
+
+        return prixVols;
     }
 }
