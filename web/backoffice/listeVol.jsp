@@ -103,7 +103,7 @@
                                 <td><%= vol.getArrivee() %></td>
                                 <td>
                                     <a href="<%= request.getContextPath() %>/vol/detail?id=<%= vol.getId() %>" class="action-btn">
-                                        <i class="fa-solid fa-eye"></i> Voir
+                                        <i class="fa-solid fa-eye"></i> Voir details
                                     </a>
                                     <a href="<%= request.getContextPath() %>/vol/edit?id=<%= vol.getId() %>" class="action-btn">
                                         <i class="fa-solid fa-pen"></i> Modifier

@@ -2,6 +2,7 @@ package model;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 public class PrixVol {
     private int id;
@@ -51,6 +52,18 @@ public class PrixVol {
         } finally {
             if (st != null) st.close();
             if (creatingConn && connex != null) connex.close();
+        }
+    }
+
+    public static void deleteByVolId(Connection conn, int volId) throws SQLException {
+        PreparedStatement st = null;
+        try {
+            String sql = "DELETE FROM PrixVol WHERE id_vol = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, volId);
+            st.executeUpdate();
+        } finally {
+            if (st != null) st.close();
         }
     }
 }

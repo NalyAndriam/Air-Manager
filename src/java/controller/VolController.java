@@ -235,6 +235,61 @@ public class VolController {
         return mv;
     }
 
+    @Get
+    @Url("/vol/delete")
+    public ModelView deleteVol(@RequestParameter("id") Integer id) throws Exception {
+        Connection conn = null;
+        ModelView mv = new ModelView();
+
+        try {
+            conn = Database.getConnection();
+            conn.setAutoCommit(false);
+
+            // Retrieve Vol to ensure it exists
+            Vol vol = Vol.getById(conn, id);
+            if (vol == null) {
+                mv.addObject("errorMessage", "Vol avec l'ID " + id + " non trouvé.");
+                mv.setUrl("/backoffice/listeVol.jsp");
+                return mv;
+            }
+
+            // Delete related PrixVol and VolSiege first
+            PrixVol.deleteByVolId(conn, id);
+            VolSiege.deleteByVolId(conn, id);
+
+            // Delete the Vol
+            vol.delete(conn);
+
+            conn.commit();
+
+            mv.setRedirect(true);
+            mv.setUrl("../vol");
+
+        } catch (Exception e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            mv.addObject("errorMessage", "Erreur lors de la suppression du vol : " + e.getMessage());
+            mv.setUrl("/backoffice/listeVol.jsp");
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return mv;
+    }
+
 
 
 }

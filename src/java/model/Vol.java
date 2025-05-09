@@ -294,6 +294,18 @@ public class Vol {
         return all;
     }
 
+    public void delete(Connection conn) throws SQLException {
+        PreparedStatement st = null;
+        try {
+            String sql = "DELETE FROM Vol WHERE id = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, this.getId());
+            st.executeUpdate();
+        } finally {
+            if (st != null) st.close();
+        }
+    }
+
 
     public static void main(String[] args) throws Exception {
         Connection conn= Database.getConnection();
