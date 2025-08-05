@@ -59,12 +59,13 @@ CREATE TABLE Reservation(
     id_vol INT REFERENCES Vol(id) NOT NULL,
     id_utilisateur INT REFERENCES Utilisateur(id) NOT NULL,
     id_typeSiege INT REFERENCES TypeSiege(id) NOT NULL,
+    nombre INT NOT NULL,
     date TIMESTAMP NOT NULL
 );
 
 CREATE TABLE Promotion(
     id SERIAL PRIMARY KEY,
-    id_avion INT REFERENCES Avion(id),
+    id_vol INT REFERENCES Vol(id),
     id_typeSiege INT REFERENCES TypeSiege(id),
     nombre DECIMAL NOT NULL,
     pourcentage DECIMAL NOT NULL
