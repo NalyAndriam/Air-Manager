@@ -10,6 +10,13 @@
             </a> 
         </div>
 
+        <div class="menu-item"> 
+            <a href="<%= request.getContextPath() %>/user-resa">                 
+                <i class="fa-solid fa-plane-departure menu-icon"></i>                 
+                <span class="menu-text">Liste Reservations</span>             
+            </a> 
+        </div>
+
     </div> 
 </div>  
 

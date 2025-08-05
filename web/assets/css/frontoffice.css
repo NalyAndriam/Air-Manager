@@ -285,3 +285,78 @@
     border-top: 1px solid #e5e7eb;
     font-weight: bold;
 }
+
+
+
+/* LISTE RESERVATION */
+.reservations-list {
+    margin-top: 2rem;
+    overflow-x: auto;
+}
+
+.reservations-list table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    font-size: 0.95rem;
+}
+
+.reservations-list th,
+.reservations-list td {
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.reservations-list th {
+    background-color: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+}
+
+.reservations-list tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.reservations-list td ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reservations-list td ul li {
+    padding: 0.25rem 0;
+    border-bottom: 1px dashed #dee2e6;
+}
+
+.reservations-list td ul li:last-child {
+    border-bottom: none;
+}
+
+.back-btn {
+    margin-top: 2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.back-btn:hover {
+    background-color: #5a6268;
+    transform: translateY(-1px);
+}

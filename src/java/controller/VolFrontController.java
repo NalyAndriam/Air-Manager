@@ -30,7 +30,7 @@ import model.VolSiege;
 @Controller
 public class VolFrontController {
     Session session;
-    
+
     public Session getSession() {
         return session;
     }
@@ -47,8 +47,7 @@ public class VolFrontController {
             @RequestParameter("dateDepart") String dateDepart,
             @RequestParameter("dateArrivee") String dateArrivee,
             @RequestParameter("prixMin") String prixMin,
-            @RequestParameter("prixMax") String prixMax
-    ) throws Exception {
+            @RequestParameter("prixMax") String prixMax) throws Exception {
         Connection conn = null;
         ModelView mv = new ModelView();
         List<Vol> vols = new ArrayList<>();
@@ -65,19 +64,19 @@ public class VolFrontController {
             }
             System.out.println("Villes chargees : " + villes.size());
 
-            boolean isSearchEmpty = 
-                (idVilleDepart == null || idVilleDepart == 0) &&
-                (idVilleArrivee == null || idVilleArrivee == 0) &&
-                (dateDepart == null || dateDepart.trim().isEmpty()) &&
-                (dateArrivee == null || dateArrivee.trim().isEmpty()) &&
-                (prixMin == null || prixMin.trim().isEmpty()) &&
-                (prixMax == null || prixMax.trim().isEmpty());
+            boolean isSearchEmpty = (idVilleDepart == null || idVilleDepart == 0) &&
+                    (idVilleArrivee == null || idVilleArrivee == 0) &&
+                    (dateDepart == null || dateDepart.trim().isEmpty()) &&
+                    (dateArrivee == null || dateArrivee.trim().isEmpty()) &&
+                    (prixMin == null || prixMin.trim().isEmpty()) &&
+                    (prixMax == null || prixMax.trim().isEmpty());
 
             if (isSearchEmpty) {
                 System.out.println("Aucun critere de recherche, chargement de tous les vols...");
                 vols = Vol.getAll(conn);
             } else {
-                System.out.println("Recherche avec criteres : villeDepart=" + idVilleDepart + ", villeArrivee=" + idVilleArrivee);
+                System.out.println(
+                        "Recherche avec criteres : villeDepart=" + idVilleDepart + ", villeArrivee=" + idVilleArrivee);
 
                 int villeDepartId = idVilleDepart != null ? idVilleDepart : 0;
                 int villeArriveeId = idVilleArrivee != null ? idVilleArrivee : 0;
@@ -140,7 +139,6 @@ public class VolFrontController {
         return mv;
     }
 
-
     @Get
     @Url("/user-vol/details")
     public ModelView showVolDetails(@RequestParameter("volId") Integer volId) throws Exception {
@@ -182,158 +180,199 @@ public class VolFrontController {
         return mv;
     }
 
+    @Post
+    @Url("/user-vol/reserve")
+    public ModelView reserve(
+            @RequestParameter("volId") Integer volId,
+            @RequestParameter("utilisateurId") Integer utilisateurId,
+            @RequestParameter("allParams") String allParams) throws Exception {
+        Connection conn = null;
+        ModelView mv = new ModelView();
 
-@Post
-@Url("/user-vol/reserve")
-public ModelView reserve(
-        @RequestParameter("volId") Integer volId,
-        @RequestParameter("utilisateurId") Integer utilisateurId,
-        @RequestParameter("allParams") String allParams
-) throws Exception {
-    Connection conn = null;
-    ModelView mv = new ModelView();
+        try {
+            conn = Database.getConnection();
+            conn.setAutoCommit(false);
 
-    try {
-        conn = Database.getConnection();
-        conn.setAutoCommit(false);
+            Vol vol = Vol.getById(conn, volId);
+            if (vol == null) {
+                throw new IllegalArgumentException("Vol avec l'ID " + volId + " non trouvé.");
+            }
 
-        Vol vol = Vol.getById(conn, volId);
-        if (vol == null) {
-            throw new IllegalArgumentException("Vol avec l'ID " + volId + " non trouvé.");
-        }
+            Utilisateur utilisateur = Utilisateur.getById(conn, utilisateurId);
+            if (utilisateur == null) {
+                throw new IllegalArgumentException("Utilisateur avec l'ID " + utilisateurId + " non trouvé.");
+            }
 
-        Utilisateur utilisateur = Utilisateur.getById(conn, utilisateurId);
-        if (utilisateur == null) {
-            throw new IllegalArgumentException("Utilisateur avec l'ID " + utilisateurId + " non trouvé.");
-        }
+            Reservation reservation = new Reservation();
+            reservation.setVol(vol);
+            reservation.setUtilisateur(utilisateur);
+            reservation.setDate(new Timestamp(System.currentTimeMillis()));
 
-        Reservation reservation = new Reservation();
-        reservation.setVol(vol);
-        reservation.setUtilisateur(utilisateur);
-        reservation.setDate(new Timestamp(System.currentTimeMillis()));
-
-        List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
-        if (allParams != null && !allParams.isEmpty()) {
-            String[] paramPairs = allParams.split(",");
-            for (String pair : paramPairs) {
-                String[] parts = pair.split(":");
-                if (parts.length == 2) {
-                    try {
-                        int typeSiegeId = Integer.parseInt(parts[0].trim());
-                        int nombre = Integer.parseInt(parts[1].trim());
-                        if (nombre > 0) {
-                            VolSiege volSiege = volSieges.stream()
-                                .filter(vs -> vs.getTypeSiege().getId() == typeSiegeId)
-                                .findFirst()
-                                .orElse(null);
-                            if (volSiege == null) {
-                                throw new IllegalArgumentException("Type de siège ID " + typeSiegeId + " non trouvé pour ce vol.");
+            List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
+            if (allParams != null && !allParams.isEmpty()) {
+                String[] paramPairs = allParams.split(",");
+                for (String pair : paramPairs) {
+                    String[] parts = pair.split(":");
+                    if (parts.length == 2) {
+                        try {
+                            int typeSiegeId = Integer.parseInt(parts[0].trim());
+                            int nombre = Integer.parseInt(parts[1].trim());
+                            if (nombre > 0) {
+                                VolSiege volSiege = volSieges.stream()
+                                        .filter(vs -> vs.getTypeSiege().getId() == typeSiegeId)
+                                        .findFirst()
+                                        .orElse(null);
+                                if (volSiege == null) {
+                                    throw new IllegalArgumentException(
+                                            "Type de siège ID " + typeSiegeId + " non trouvé pour ce vol.");
+                                }
+                                checkAvailableSeats(conn, volId, typeSiegeId, nombre);
+                                reservation.addTypeSiegeAndNombre(volSiege.getTypeSiege(), nombre);
+                                volSiege.setNombre(volSiege.getNombre() - nombre);
+                                volSiege.update(conn);
                             }
-                            checkAvailableSeats(conn, volId, typeSiegeId, nombre);
-                            reservation.addTypeSiegeAndNombre(volSiege.getTypeSiege(), nombre);
-                            volSiege.setNombre(volSiege.getNombre() - nombre);
-                            volSiege.update(conn);
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Format de paramètre invalide: " + pair);
                         }
-                    } catch (NumberFormatException e) {
-                        throw new IllegalArgumentException("Format de paramètre invalide: " + pair);
                     }
+                }
+            }
+
+            if (reservation.getTypeSieges().isEmpty()) {
+                throw new IllegalArgumentException("Aucune place sélectionnée pour la réservation.");
+            }
+
+            reservation.insert(conn);
+            conn.commit();
+
+            mv.setRedirect(true);
+            mv.setUrl("../user-vol");
+
+        } catch (Exception e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+            mv.addObject("errorMessage", "Erreur lors de la réservation: " + e.getMessage());
+            mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (Exception e) {
+                    mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
+                    mv.setUrl("/frontoffice/error.jsp");
+                    e.printStackTrace();
                 }
             }
         }
 
-        if (reservation.getTypeSieges().isEmpty()) {
-            throw new IllegalArgumentException("Aucune place sélectionnée pour la réservation.");
-        }
+        return mv;
+    }
 
-        reservation.insert(conn);
-        conn.commit();
+    public void checkAvailableSeats(Connection conn, int volId, int typeSiegeId, int requestedSeats) throws Exception {
+        PreparedStatement st = null;
+        ResultSet res = null;
+        PreparedStatement stReserved = null;
+        ResultSet resReserved = null;
+        boolean creatingConn = false;
 
-        mv.setRedirect(true);
-        mv.setUrl("../user-vol");
-
-    } catch (Exception e) {
-        if (conn != null) {
-            try {
-                conn.rollback();
-            } catch (Exception ex) {
-                ex.printStackTrace();
+        try {
+            if (conn == null) {
+                conn = Database.getConnection();
+                creatingConn = true;
             }
-        }
-        mv.addObject("errorMessage", "Erreur lors de la réservation: " + e.getMessage());
-        mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
-        e.printStackTrace();
-    } finally {
-        if (conn != null) {
-            try {
-                conn.setAutoCommit(true);
+
+            // Récupérer le nombre total de sièges disponibles pour ce type dans VolSiege
+            String sql = "SELECT nombre FROM VolSiege WHERE id_vol = ? AND id_typeSiege = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, volId);
+            st.setInt(2, typeSiegeId);
+            res = st.executeQuery();
+
+            int totalSeats = 0;
+            if (res.next()) {
+                totalSeats = res.getInt("nombre");
+            } else {
+                throw new IllegalArgumentException("Aucune information de siège trouvée pour le vol ID " + volId
+                        + " et le type de siège ID " + typeSiegeId);
+            }
+
+            // Récupérer le nombre de sièges déjà réservés pour ce vol et ce type de siège
+            String sqlReserved = "SELECT COALESCE(SUM(nombre), 0) as reserved FROM Reservation WHERE id_vol = ? AND id_typeSiege = ?";
+            stReserved = conn.prepareStatement(sqlReserved);
+            stReserved.setInt(1, volId);
+            stReserved.setInt(2, typeSiegeId);
+            resReserved = stReserved.executeQuery();
+
+            int reservedSeats = 0;
+            if (resReserved.next()) {
+                reservedSeats = resReserved.getInt("reserved");
+            }
+
+            // Calculer les sièges réellement disponibles
+            int availableSeats = totalSeats - reservedSeats;
+
+            if (requestedSeats > availableSeats) {
+                TypeSiege typeSiege = TypeSiege.getById(conn, typeSiegeId);
+                throw new IllegalArgumentException(
+                        "Nombre de places demandées (" + requestedSeats + ") dépasse les places disponibles ("
+                                + availableSeats + ") pour le type de siège " + typeSiege.getNom());
+            }
+
+        } finally {
+            if (resReserved != null)
+                resReserved.close();
+            if (stReserved != null)
+                stReserved.close();
+            if (res != null)
+                res.close();
+            if (st != null)
+                st.close();
+            if (creatingConn && conn != null)
                 conn.close();
-            } catch (Exception e) {
-                mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
-                mv.setUrl("/frontoffice/error.jsp");
-                e.printStackTrace();
+        }
+    }
+
+    @Get
+    @Url("/user-resa")
+    public ModelView showReservations() throws Exception {
+        Connection conn = null;
+        ModelView mv = new ModelView();
+
+        try {
+            conn = Database.getConnection();
+            Utilisateur user = (Utilisateur) session.get("user");
+            if (user == null) {
+                mv.setUrl("/frontoffice/login.jsp");
+                mv.setRedirect(true);
+                return mv;
+            }
+            List<Reservation> reservations = Reservation.getByUtilisateurId(conn, user.getId());
+            mv.addObject("reservations", reservations);
+            mv.setUrl("/frontoffice/reservations.jsp");
+        } catch (Exception e) {
+            mv.addObject("errorMessage", "Erreur lors du chargement des réservations: " + e.getMessage());
+            mv.setUrl("/frontoffice/error.jsp");
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (Exception e) {
+                    mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
+                    mv.setUrl("/frontoffice/error.jsp");
+                    e.printStackTrace();
+                }
             }
         }
+
+        return mv;
     }
-
-    return mv;
-}
-
-public void checkAvailableSeats(Connection conn, int volId, int typeSiegeId, int requestedSeats) throws Exception {
-    PreparedStatement st = null;
-    ResultSet res = null;
-    PreparedStatement stReserved = null;
-    ResultSet resReserved = null;
-    boolean creatingConn = false;
-
-    try {
-        if (conn == null) {
-            conn = Database.getConnection();
-            creatingConn = true;
-        }
-
-        // Récupérer le nombre total de sièges disponibles pour ce type dans VolSiege
-        String sql = "SELECT nombre FROM VolSiege WHERE id_vol = ? AND id_typeSiege = ?";
-        st = conn.prepareStatement(sql);
-        st.setInt(1, volId);
-        st.setInt(2, typeSiegeId);
-        res = st.executeQuery();
-
-        int totalSeats = 0;
-        if (res.next()) {
-            totalSeats = res.getInt("nombre");
-        } else {
-            throw new IllegalArgumentException("Aucune information de siège trouvée pour le vol ID " + volId + " et le type de siège ID " + typeSiegeId);
-        }
-
-        // Récupérer le nombre de sièges déjà réservés pour ce vol et ce type de siège
-        String sqlReserved = "SELECT COALESCE(SUM(nombre), 0) as reserved FROM Reservation WHERE id_vol = ? AND id_typeSiege = ?";
-        stReserved = conn.prepareStatement(sqlReserved);
-        stReserved.setInt(1, volId);
-        stReserved.setInt(2, typeSiegeId);
-        resReserved = stReserved.executeQuery();
-
-        int reservedSeats = 0;
-        if (resReserved.next()) {
-            reservedSeats = resReserved.getInt("reserved");
-        }
-
-        // Calculer les sièges réellement disponibles
-        int availableSeats = totalSeats - reservedSeats;
-
-        if (requestedSeats > availableSeats) {
-            TypeSiege typeSiege = TypeSiege.getById(conn, typeSiegeId);
-            throw new IllegalArgumentException("Nombre de places demandées (" + requestedSeats + ") dépasse les places disponibles (" + availableSeats + ") pour le type de siège " + typeSiege.getNom());
-        }
-
-    } finally {
-        if (resReserved != null) resReserved.close();
-        if (stReserved != null) stReserved.close();
-        if (res != null) res.close();
-        if (st != null) st.close();
-        if (creatingConn && conn != null) conn.close();
-    }
-}
-
-
 
 }
