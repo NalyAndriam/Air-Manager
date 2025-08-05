@@ -2,9 +2,13 @@ package controller;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import mg.emberframework.annotation.http.Controller;
 import mg.emberframework.annotation.http.Get;
@@ -16,6 +20,8 @@ import mg.emberframework.core.data.ModelView;
 import mg.emberframework.core.data.Session;
 import model.Database;
 import model.PrixVol;
+import model.Reservation;
+import model.TypeSiege;
 import model.Utilisateur;
 import model.Ville;
 import model.Vol;
@@ -175,6 +181,159 @@ public class VolFrontController {
 
         return mv;
     }
+
+
+@Post
+@Url("/user-vol/reserve")
+public ModelView reserve(
+        @RequestParameter("volId") Integer volId,
+        @RequestParameter("utilisateurId") Integer utilisateurId,
+        @RequestParameter("allParams") String allParams
+) throws Exception {
+    Connection conn = null;
+    ModelView mv = new ModelView();
+
+    try {
+        conn = Database.getConnection();
+        conn.setAutoCommit(false);
+
+        Vol vol = Vol.getById(conn, volId);
+        if (vol == null) {
+            throw new IllegalArgumentException("Vol avec l'ID " + volId + " non trouvé.");
+        }
+
+        Utilisateur utilisateur = Utilisateur.getById(conn, utilisateurId);
+        if (utilisateur == null) {
+            throw new IllegalArgumentException("Utilisateur avec l'ID " + utilisateurId + " non trouvé.");
+        }
+
+        Reservation reservation = new Reservation();
+        reservation.setVol(vol);
+        reservation.setUtilisateur(utilisateur);
+        reservation.setDate(new Timestamp(System.currentTimeMillis()));
+
+        List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
+        if (allParams != null && !allParams.isEmpty()) {
+            String[] paramPairs = allParams.split(",");
+            for (String pair : paramPairs) {
+                String[] parts = pair.split(":");
+                if (parts.length == 2) {
+                    try {
+                        int typeSiegeId = Integer.parseInt(parts[0].trim());
+                        int nombre = Integer.parseInt(parts[1].trim());
+                        if (nombre > 0) {
+                            VolSiege volSiege = volSieges.stream()
+                                .filter(vs -> vs.getTypeSiege().getId() == typeSiegeId)
+                                .findFirst()
+                                .orElse(null);
+                            if (volSiege == null) {
+                                throw new IllegalArgumentException("Type de siège ID " + typeSiegeId + " non trouvé pour ce vol.");
+                            }
+                            checkAvailableSeats(conn, volId, typeSiegeId, nombre);
+                            reservation.addTypeSiegeAndNombre(volSiege.getTypeSiege(), nombre);
+                            volSiege.setNombre(volSiege.getNombre() - nombre);
+                            volSiege.update(conn);
+                        }
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Format de paramètre invalide: " + pair);
+                    }
+                }
+            }
+        }
+
+        if (reservation.getTypeSieges().isEmpty()) {
+            throw new IllegalArgumentException("Aucune place sélectionnée pour la réservation.");
+        }
+
+        reservation.insert(conn);
+        conn.commit();
+
+        mv.setRedirect(true);
+        mv.setUrl("../user-vol");
+
+    } catch (Exception e) {
+        if (conn != null) {
+            try {
+                conn.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+        mv.addObject("errorMessage", "Erreur lors de la réservation: " + e.getMessage());
+        mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
+        e.printStackTrace();
+    } finally {
+        if (conn != null) {
+            try {
+                conn.setAutoCommit(true);
+                conn.close();
+            } catch (Exception e) {
+                mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
+                mv.setUrl("/frontoffice/error.jsp");
+                e.printStackTrace();
+            }
+        }
+    }
+
+    return mv;
+}
+
+public void checkAvailableSeats(Connection conn, int volId, int typeSiegeId, int requestedSeats) throws Exception {
+    PreparedStatement st = null;
+    ResultSet res = null;
+    PreparedStatement stReserved = null;
+    ResultSet resReserved = null;
+    boolean creatingConn = false;
+
+    try {
+        if (conn == null) {
+            conn = Database.getConnection();
+            creatingConn = true;
+        }
+
+        // Récupérer le nombre total de sièges disponibles pour ce type dans VolSiege
+        String sql = "SELECT nombre FROM VolSiege WHERE id_vol = ? AND id_typeSiege = ?";
+        st = conn.prepareStatement(sql);
+        st.setInt(1, volId);
+        st.setInt(2, typeSiegeId);
+        res = st.executeQuery();
+
+        int totalSeats = 0;
+        if (res.next()) {
+            totalSeats = res.getInt("nombre");
+        } else {
+            throw new IllegalArgumentException("Aucune information de siège trouvée pour le vol ID " + volId + " et le type de siège ID " + typeSiegeId);
+        }
+
+        // Récupérer le nombre de sièges déjà réservés pour ce vol et ce type de siège
+        String sqlReserved = "SELECT COALESCE(SUM(nombre), 0) as reserved FROM Reservation WHERE id_vol = ? AND id_typeSiege = ?";
+        stReserved = conn.prepareStatement(sqlReserved);
+        stReserved.setInt(1, volId);
+        stReserved.setInt(2, typeSiegeId);
+        resReserved = stReserved.executeQuery();
+
+        int reservedSeats = 0;
+        if (resReserved.next()) {
+            reservedSeats = resReserved.getInt("reserved");
+        }
+
+        // Calculer les sièges réellement disponibles
+        int availableSeats = totalSeats - reservedSeats;
+
+        if (requestedSeats > availableSeats) {
+            TypeSiege typeSiege = TypeSiege.getById(conn, typeSiegeId);
+            throw new IllegalArgumentException("Nombre de places demandées (" + requestedSeats + ") dépasse les places disponibles (" + availableSeats + ") pour le type de siège " + typeSiege.getNom());
+        }
+
+    } finally {
+        if (resReserved != null) resReserved.close();
+        if (stReserved != null) stReserved.close();
+        if (res != null) res.close();
+        if (st != null) st.close();
+        if (creatingConn && conn != null) conn.close();
+    }
+}
+
 
 
 }

@@ -5,6 +5,10 @@
     List<Ville> villes = (List<Ville>) request.getAttribute("villes");
     String errorMessage = (String) request.getAttribute("errorMessage");
     Utilisateur user = (Utilisateur) session.getAttribute("user");
+    if (user == null) {
+        response.sendRedirect(request.getContextPath() + "/login");
+        return;
+    }
 %>
 <!DOCTYPE html>
 <html lang="fr">
@@ -53,9 +57,9 @@
                 <form action="<%= request.getContextPath() %>/user-vol" method="GET" class="search-form">
                     <div class="search-grid">
                         <div class="search-item">
-                            <label for="villeDepart">Ville de départ:</label>
+                            <label for="villeDepart">Ville de depart:</label>
                             <select id="villeDepart" name="villeDepart">
-                                <option value="0">Sélectionner une ville de départ</option>
+                                <option value="0">Selectionner une ville de depart</option>
                                 <% if (villes != null && !villes.isEmpty()) { %>
                                     <% for (Ville ville : villes) { %>
                                         <option value="<%= ville.getId() %>"><%= ville.getNom() %></option>
@@ -64,9 +68,9 @@
                             </select>
                         </div>
                         <div class="search-item">
-                            <label for="villeArrivee">Ville d'arrivée:</label>
+                            <label for="villeArrivee">Ville d'arrivee:</label>
                             <select id="villeArrivee" name="villeArrivee">
-                                <option value="0">Sélectionner une ville d'arrivée</option>
+                                <option value="0">Selectionner une ville d'arrivee</option>
                                 <% if (villes != null && !villes.isEmpty()) { %>
                                     <% for (Ville ville : villes) { %>
                                         <option value="<%= ville.getId() %>"><%= ville.getNom() %></option>
@@ -75,11 +79,11 @@
                             </select>
                         </div>
                         <div class="search-item">
-                            <label for="dateDepart">Date de départ</label>
+                            <label for="dateDepart">Date de depart</label>
                             <input type="date" id="dateDepart" name="dateDepart">
                         </div>
                         <div class="search-item">
-                            <label for="dateArrivee">Date d'arrivée</label>
+                            <label for="dateArrivee">Date d'arrivee</label>
                             <input type="date" id="dateArrivee" name="dateArrivee">
                         </div>
                         <div class="search-item">
@@ -96,7 +100,7 @@
                             <i class="fa-solid fa-search"></i> Rechercher
                         </button>
                         <button type="reset" class="reset-btn">
-                            <i class="fa-solid fa-times"></i> Réinitialiser
+                            <i class="fa-solid fa-times"></i> Reinitialiser
                         </button>
                     </div>
                 </form>
@@ -105,10 +109,10 @@
             <table class="vol-table">
                 <thead>
                     <tr>
-                        <th>Ville de départ</th>
-                        <th>Ville d'arrivée</th>
-                        <th>Heure de départ</th>
-                        <th>Heure d'arrivée</th>
+                        <th>Ville de depart</th>
+                        <th>Ville d'arrivee</th>
+                        <th>Heure de depart</th>
+                        <th>Heure d'arrivee</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -123,7 +127,7 @@
                         <% } %>
                     <% } else { %>
                         <tr>
-                            <td colspan="4">Aucun vol trouvé.</td>
+                            <td colspan="4">Aucun vol trouve.</td>
                         </tr>
                     <% } %>
                 </tbody>
