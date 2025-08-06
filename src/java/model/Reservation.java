@@ -294,4 +294,63 @@ public class Reservation {
             if (creatingConn && conn != null) conn.close();
         }
     }
+
+    // Supprimer une réservation par son ID et mettre à jour les sièges disponibles
+    public static void deleteById(Connection conn, int reservationId) throws Exception {
+        PreparedStatement st = null;
+        ResultSet res = null;
+        boolean creatingConn = false;
+
+        try {
+            if (conn == null) {
+                conn = Database.getConnection();
+                creatingConn = true;
+            }
+
+            // Récupérer les informations de la réservation pour mettre à jour VolSiege
+            String sql = "SELECT id_vol, id_typeSiege, nombre FROM Reservation WHERE id = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, reservationId);
+            res = st.executeQuery();
+
+            List<Integer> volIds = new ArrayList<>();
+            List<Integer> typeSiegeIds = new ArrayList<>();
+            List<Integer> nombres = new ArrayList<>();
+
+            while (res.next()) {
+                volIds.add(res.getInt("id_vol"));
+                typeSiegeIds.add(res.getInt("id_typeSiege"));
+                nombres.add(res.getInt("nombre"));
+            }
+
+            if (volIds.isEmpty()) {
+                throw new SQLException("Réservation avec l'ID " + reservationId + " non trouvée.");
+            }
+
+            // Mettre à jour les sièges disponibles dans VolSiege
+            for (int i = 0; i < volIds.size(); i++) {
+                VolSiege volSiege = VolSiege.getByVolIdAndTypeSiegeId(conn, volIds.get(i), typeSiegeIds.get(i));
+                if (volSiege != null) {
+                    volSiege.setNombre(volSiege.getNombre() + nombres.get(i));
+                    volSiege.update(conn);
+                }
+            }
+
+            // Supprimer la réservation
+            sql = "DELETE FROM Reservation WHERE id = ?";
+            st.close();
+            st = conn.prepareStatement(sql);
+            st.setInt(1, reservationId);
+            int rowsAffected = st.executeUpdate();
+
+            if (rowsAffected == 0) {
+                throw new SQLException("Échec de la suppression de la réservation avec l'ID " + reservationId);
+            }
+
+        } finally {
+            if (res != null) res.close();
+            if (st != null) st.close();
+            if (creatingConn && conn != null) conn.close();
+        }
+    }
 }

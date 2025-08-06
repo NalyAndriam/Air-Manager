@@ -122,4 +122,39 @@ public class VolSiege {
             if (creatingConn && conn != null) conn.close();
         }
     }
+
+    public static VolSiege getByVolIdAndTypeSiegeId(Connection conn, int volId, int typeSiegeId) throws Exception {
+        PreparedStatement st = null;
+        ResultSet res = null;
+        VolSiege volSiege = null;
+        boolean creatingConn = false;
+
+        try {
+            if (conn == null) {
+                conn = Database.getConnection();
+                creatingConn = true;
+            }
+
+            String sql = "SELECT * FROM VolSiege WHERE id_vol = ? AND id_typeSiege = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, volId);
+            st.setInt(2, typeSiegeId);
+            res = st.executeQuery();
+
+            if (res.next()) {
+                volSiege = new VolSiege();
+                volSiege.setId(res.getInt("id"));
+                volSiege.setVol(Vol.getById(conn, res.getInt("id_vol")));
+                volSiege.setTypeSiege(TypeSiege.getById(conn, res.getInt("id_typeSiege")));
+                volSiege.setNombre(res.getInt("nombre"));
+            }
+
+            return volSiege;
+
+        } finally {
+            if (res != null) res.close();
+            if (st != null) st.close();
+            if (creatingConn && conn != null) conn.close();
+        }
+    }
 }

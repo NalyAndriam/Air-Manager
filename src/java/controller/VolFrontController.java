@@ -397,4 +397,103 @@ public class VolFrontController {
         return mv;
     }
 
+    @Post
+    @Url("/user-vol/cancel")
+    public ModelView cancelReservation(@RequestParameter("reservationId") Integer reservationId) throws Exception {
+        Connection conn = null;
+        ModelView mv = new ModelView();
+
+        try {
+            conn = Database.getConnection();
+            conn.setAutoCommit(false);
+
+            // Récupérer la réservation
+            Reservation reservation = null;
+            PreparedStatement st = conn.prepareStatement("SELECT * FROM Reservation WHERE id = ?");
+            st.setInt(1, reservationId);
+            ResultSet res = st.executeQuery();
+            List<Reservation> tempReservations = new ArrayList<>();
+
+            while (res.next()) {
+                Reservation temp = new Reservation();
+                temp.setId(res.getInt("id"));
+                temp.setVol(Vol.getById(conn, res.getInt("id_vol")));
+                temp.setUtilisateur(Utilisateur.getById(conn, res.getInt("id_utilisateur")));
+                temp.addTypeSiegeAndNombre(TypeSiege.getById(conn, res.getInt("id_typeSiege")), res.getInt("nombre"));
+                temp.setDate(res.getTimestamp("date"));
+                tempReservations.add(temp);
+            }
+            res.close();
+            st.close();
+
+            if (!tempReservations.isEmpty()) {
+                reservation = tempReservations.get(0);
+                for (int i = 1; i < tempReservations.size(); i++) {
+                    Reservation temp = tempReservations.get(i);
+                    reservation.getTypeSieges().addAll(temp.getTypeSieges());
+                    reservation.getNombres().addAll(temp.getNombres());
+                }
+            }
+
+            if (reservation == null) {
+                mv.addObject("errorMessage", "Réservation avec l'ID " + reservationId + " non trouvée.");
+                mv.setUrl("/frontoffice/reservations.jsp");
+                return mv;
+            }
+
+            // Vérification de l'heure d'annulation
+            ReservationConfig config = ReservationConfig.getLatest(conn);
+            if (config == null) {
+                mv.addObject("errorMessage", "Configuration de réservation non trouvée.");
+                mv.setUrl("/frontoffice/reservations.jsp");
+                return mv;
+            }
+
+            long currentTime = System.currentTimeMillis();
+            long volDepartureTime = reservation.getVol().getDepart().getTime();
+            long hoursBeforeFlight = (volDepartureTime - currentTime) / (1000 * 60 * 60); // Conversion en heures
+
+            if (hoursBeforeFlight < config.getHeureAnnulation()) {
+                mv.addObject("errorMessage", 
+                    "L'annulation ne peut pas être effectuée. Il faut annuler au moins " + 
+                    config.getHeureAnnulation() + " heures avant le départ du vol.");
+                mv.setUrl("/frontoffice/reservations.jsp");
+                return mv;
+            }
+
+            // Supprimer la réservation et mettre à jour les sièges
+            Reservation.deleteById(conn, reservationId);
+
+            conn.commit();
+
+            mv.setRedirect(true);
+            mv.setUrl("../user-resa");
+
+        } catch (Exception e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            mv.addObject("errorMessage", "Erreur lors de l'annulation de la réservation : " + e.getMessage());
+            mv.setUrl("/frontoffice/reservations.jsp");
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion : " + e.getMessage());
+                    mv.setUrl("/frontoffice/error.jsp");
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return mv;
+    }
+
 }
