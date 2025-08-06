@@ -49,11 +49,11 @@ public class UserController {
             Utilisateur utilisateur = Utilisateur.login(conn, user.getEmail(), user.getMdp());
             if (utilisateur != null) {
                 String role = utilisateur.getRole().getNom();
-                session.add("user", utilisateur); 
                 if (role.equals("admin")) {
                     mv.setRedirect(true);
                     mv.setUrl("./vol");
                 } else {
+                    session.add("user", utilisateur); 
                     mv.setRedirect(true);
                     mv.setUrl("./user-vol");    
                 }
