@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="model.*" %>
 <%@ page import="java.util.List" %>
+<%@ page import="java.util.Base64" %>
 <%
     Utilisateur user = (Utilisateur) session.getAttribute("user");
     if (user == null) {
@@ -103,7 +104,8 @@
                                         '<%= reservation.getVol().getArrivee() %>',
                                         '<%= String.join(", ", reservation.getTypeSieges().stream().map(TypeSiege::getNom).toList()) %>',
                                         '<%= reservation.getNombres().toString().replaceAll("[\\[\\]]", "") %>',
-                                        '<%= reservation.getDate() %>'
+                                        '<%= reservation.getDate() %>',
+                                        '<%= reservation.getPasseport() != null ? Base64.getEncoder().encodeToString(reservation.getPasseport()) : "" %>'
                                     )" class="generate-btn">
                                         <i class="fa-solid fa-file-pdf"></i> 
                                     </button>
@@ -173,6 +175,12 @@
                             </div>
                         </div>
 
+                        <!-- Image du passeport -->
+                        <div style="background-color: #fff; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 1rem; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: #374151; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Passeport</h4>
+                            <img id="pdf-passeport" style="max-width: 200px; height: auto;" src="" alt="Passeport">
+                        </div>
+
                         <!-- Date de réservation -->
                         <div style="background-color: #fff; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 1rem;">
                             <h4 style="margin: 0 0 0.5rem 0; color: #374151; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Date de Réservation</h4>
@@ -199,7 +207,7 @@
 </div>
 
 <script>
-    async function generatePDF(nom, depart, arrivee, dateDepart, dateArrivee, sieges, places, dateResa) {
+    async function generatePDF(nom, depart, arrivee, dateDepart, dateArrivee, sieges, places, dateResa, passeportBase64) {
         document.getElementById("pdf-nom").textContent = nom;
         document.getElementById("pdf-depart").textContent = depart;
         document.getElementById("pdf-arrivee").textContent = arrivee;
@@ -208,6 +216,12 @@
         document.getElementById("pdf-sieges").textContent = sieges;
         document.getElementById("pdf-places").textContent = places;
         document.getElementById("pdf-date-reservation").textContent = formatDate(dateResa);
+        const passeportImg = document.getElementById("pdf-passeport");
+        if (passeportBase64) {
+            passeportImg.src = "data:image/png;base64," + passeportBase64;
+        } else {
+            passeportImg.style.display = "none";
+        }
 
         const element = document.getElementById("ticket-template");
         element.style.display = "block";
@@ -223,7 +237,6 @@
     }
 
     function formatDate(dateStr) {
-        // Compatible avec format SQL Timestamp : "2025-08-05 14:55:51.362"
         const date = new Date(dateStr);
         const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: "2-digit", minute: "2-digit" };
         return date.toLocaleString('fr-FR', options);

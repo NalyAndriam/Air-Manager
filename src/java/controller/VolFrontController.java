@@ -181,121 +181,147 @@ public class VolFrontController {
         return mv;
     }
 
-    @Post
-    @Url("/user-vol/reserve")
-    public ModelView reserve(
-            @RequestParameter("volId") Integer volId,
-            @RequestParameter("utilisateurId") Integer utilisateurId,
-            @RequestParameter("allParams") String allParams) throws Exception {
-        Connection conn = null;
-        ModelView mv = new ModelView();
+@Post
+@Url("/user-vol/reserve")
+public ModelView reserve(
+        @RequestParameter("volId") Integer volId,
+        @RequestParameter("utilisateurId") Integer utilisateurId,
+        @RequestParameter("allParams") String allParams,
+        @RequestParameter("passeport") File passeport) throws Exception {
+    Connection conn = null;
+    ModelView mv = new ModelView();
 
-        try {
-            conn = Database.getConnection();
-            conn.setAutoCommit(false);
+    try {
+        conn = Database.getConnection();
+        conn.setAutoCommit(false);
 
-            Vol vol = Vol.getById(conn, volId);
-            if (vol == null) {
-                throw new IllegalArgumentException("Vol avec l'ID " + volId + " non trouvé.");
-            }
+        Vol vol = Vol.getById(conn, volId);
+        if (vol == null) {
+            throw new IllegalArgumentException("Vol avec l'ID " + volId + " non trouvé.");
+        }
 
-            Utilisateur utilisateur = Utilisateur.getById(conn, utilisateurId);
-            if (utilisateur == null) {
-                throw new IllegalArgumentException("Utilisateur avec l'ID " + utilisateurId + " non trouvé.");
-            }
+        Utilisateur utilisateur = Utilisateur.getById(conn, utilisateurId);
+        if (utilisateur == null) {
+            throw new IllegalArgumentException("Utilisateur avec l'ID " + utilisateurId + " non trouvé.");
+        }
 
-            // Vérification de l'heure de réservation
-            ReservationConfig config = ReservationConfig.getLatest(conn);
-            if (config == null) {
-                throw new IllegalArgumentException("Configuration de réservation non trouvée.");
-            }
+        // Vérification de l'heure de réservation
+        ReservationConfig config = ReservationConfig.getLatest(conn);
+        if (config == null) {
+            throw new IllegalArgumentException("Configuration de réservation non trouvée.");
+        }
 
-            long currentTime = System.currentTimeMillis();
-            long volDepartureTime = vol.getDepart().getTime();
-            long hoursBeforeFlight = (volDepartureTime - currentTime) / (1000 * 60 * 60); // Conversion en heures
+        long currentTime = System.currentTimeMillis();
+        long volDepartureTime = vol.getDepart().getTime();
+        long hoursBeforeFlight = (volDepartureTime - currentTime) / (1000 * 60 * 60); // Conversion en heures
 
-            if (hoursBeforeFlight < config.getHeureReservation()) {
-                mv.addObject("errorMessage", 
-                    "La réservation ne peut pas être effectuée. Il faut réserver au moins " + 
-                    config.getHeureReservation() + " heures avant le départ du vol.");
-                mv.addObject("vol", vol);
-                mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
-                mv.addObject("prixVols", PrixVol.getByVolId(conn, volId)); // Assuming PrixVol has a getByVolId method
-                mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
-                return mv;
-            }
-
-            Reservation reservation = new Reservation();
-            reservation.setVol(vol);
-            reservation.setUtilisateur(utilisateur);
-            reservation.setDate(new Timestamp(currentTime));
-
-            List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
-            if (allParams != null && !allParams.isEmpty()) {
-                String[] paramPairs = allParams.split(",");
-                for (String pair : paramPairs) {
-                    String[] parts = pair.split(":");
-                    if (parts.length == 2) {
-                        try {
-                            int typeSiegeId = Integer.parseInt(parts[0].trim());
-                            int nombre = Integer.parseInt(parts[1].trim());
-                            if (nombre > 0) {
-                                VolSiege volSiege = volSieges.stream()
-                                        .filter(vs -> vs.getTypeSiege().getId() == typeSiegeId)
-                                        .findFirst()
-                                        .orElse(null);
-                                if (volSiege == null) {
-                                    throw new IllegalArgumentException(
-                                            "Type de siège ID " + typeSiegeId + " non trouvé pour ce vol.");
-                                }
-                                checkAvailableSeats(conn, volId, typeSiegeId, nombre);
-                                reservation.addTypeSiegeAndNombre(volSiege.getTypeSiege(), nombre);
-                                volSiege.setNombre(volSiege.getNombre() - nombre);
-                                volSiege.update(conn);
-                            }
-                        } catch (NumberFormatException e) {
-                            throw new IllegalArgumentException("Format de paramètre invalide: " + pair);
-                        }
-                    }
-                }
-            }
-
-            if (reservation.getTypeSieges().isEmpty()) {
-                throw new IllegalArgumentException("Aucune place sélectionnée pour la réservation.");
-            }
-
-            reservation.insert(conn);
-            conn.commit();
-
-            mv.setRedirect(true);
-            mv.setUrl("../user-vol");
-
-        } catch (Exception e) {
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-            mv.addObject("errorMessage", "Erreur lors de la réservation: " + e.getMessage());
+        if (hoursBeforeFlight < config.getHeureReservation()) {
+            mv.addObject("errorMessage", 
+                "La réservation ne peut pas être effectuée. Il faut réserver au moins " + 
+                config.getHeureReservation() + " heures avant le départ du vol.");
+            mv.addObject("vol", vol);
+            mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
+            mv.addObject("prixVols", PrixVol.getByVolId(conn, volId));
             mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
-            e.printStackTrace();
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (Exception e) {
-                    mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
-                    mv.setUrl("/frontoffice/error.jsp");
-                    e.printStackTrace();
+            return mv;
+        }
+
+        // Vérification de l'image du passeport
+        if (passeport == null || passeport.getFileBytes() == null || passeport.getFileBytes().length == 0) {
+            mv.addObject("errorMessage", "Le fichier contenant le passeport n'a pas ete televersee");
+            mv.addObject("vol", vol);
+            mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
+            mv.addObject("prixVols", PrixVol.getByVolId(conn, volId));
+            mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
+        }
+
+        // Vérifier l'extension du fichier pour s'assurer qu'il s'agit d'une image
+        String fileName = passeport.getFileName();
+        if (fileName == null || !(fileName.toLowerCase().endsWith(".png") || 
+                                  fileName.toLowerCase().endsWith(".jpg") || 
+                                  fileName.toLowerCase().endsWith(".jpeg"))) {
+            throw new IllegalArgumentException("Le fichier téléversé doit être une image (PNG, JPG, JPEG).");
+        }
+
+        // Vérifier la taille du fichier (max 2 Mo)
+        long maxSize = 2 * 1024 * 1024; // 2 Mo
+        if (passeport.getFileBytes().length > maxSize) {
+            throw new IllegalArgumentException("L'image du passeport ne doit pas dépasser 2 Mo.");
+        }
+
+        Reservation reservation = new Reservation();
+        reservation.setVol(vol);
+        reservation.setUtilisateur(utilisateur);
+        reservation.setDate(new Timestamp(currentTime));
+        reservation.setPasseport(passeport.getFileBytes());
+
+        List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
+        if (allParams != null && !allParams.isEmpty()) {
+            String[] paramPairs = allParams.split(",");
+            for (String pair : paramPairs) {
+                String[] parts = pair.split(":");
+                if (parts.length == 2) {
+                    try {
+                        int typeSiegeId = Integer.parseInt(parts[0].trim());
+                        int nombre = Integer.parseInt(parts[1].trim());
+                        if (nombre > 0) {
+                            VolSiege volSiege = volSieges.stream()
+                                    .filter(vs -> vs.getTypeSiege().getId() == typeSiegeId)
+                                    .findFirst()
+                                    .orElse(null);
+                            if (volSiege == null) {
+                                throw new IllegalArgumentException(
+                                        "Type de siège ID " + typeSiegeId + " non trouvé pour ce vol.");
+                            }
+                            checkAvailableSeats(conn, volId, typeSiegeId, nombre);
+                            reservation.addTypeSiegeAndNombre(volSiege.getTypeSiege(), nombre);
+                            volSiege.setNombre(volSiege.getNombre() - nombre);
+                            volSiege.update(conn);
+                        }
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Format de paramètre invalide: " + pair);
+                    }
                 }
             }
         }
 
-        return mv;
+        if (reservation.getTypeSieges().isEmpty()) {
+            throw new IllegalArgumentException("Aucune place sélectionnée pour la réservation.");
+        }
+
+        reservation.insert(conn);
+        conn.commit();
+
+        mv.setRedirect(true);
+        mv.setUrl("../user-vol");
+
+    } catch (Exception e) {
+        if (conn != null) {
+            try {
+                conn.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+        mv.addObject("errorMessage", "Erreur lors de la réservation: " + e.getMessage());
+        mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
+        e.printStackTrace();
+    } finally {
+        if (conn != null) {
+            try {
+                conn.setAutoCommit(true);
+                conn.close();
+            } catch (Exception e) {
+                mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
+                mv.setUrl("/frontoffice/error.jsp");
+                e.printStackTrace();
+            }
+        }
     }
+
+    return mv;
+}
+
 
     public void checkAvailableSeats(Connection conn, int volId, int typeSiegeId, int requestedSeats) throws Exception {
         PreparedStatement st = null;

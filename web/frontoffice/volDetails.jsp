@@ -54,7 +54,7 @@
                 <p><strong>Heure d'arrivee:</strong> <%= vol.getArrivee() %></p>
 
                 <h2>Reserver des places</h2>
-                <form id="reservationForm" action="<%= request.getContextPath() %>/user-vol/reserve" method="POST">
+                <form id="reservationForm" action="<%= request.getContextPath() %>/user-vol/reserve" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="volId" value="<%= vol.getId() %>">
                     <input type="hidden" name="utilisateurId" value="<%= user.getId() %>">
                     <table>
@@ -94,11 +94,17 @@
                             <% } %>
                         </tbody>
                     </table>
+
+                    <div style="margin-top: 1rem;">
+                        <label for="passeport"><strong>Upload du passeport:</strong></label>
+                        <input type="file" name="passeport" id="passeport" accept="image/*" required>
+                    </div>
+
                     <p><strong>Total: </strong><span id="totalPrice">0.00</span> Ar</p>
                     <a href="<%= request.getContextPath() %>/user-vol" class="back-btn">
                         <i class="fa-solid fa-arrow-left"></i> Retour à la liste
                     </a>
-                    <button type="button" class="reserve-btn" onclick="submitReservation()">
+                    <button type="button" class="reserve-btn" onclick="submitReservation()" disabled>
                         <i class="fa-solid fa-ticket"></i> Reserver
                     </button>
                 </form>
@@ -115,6 +121,7 @@
 <script>
     function updateTotal() {
         let total = 0;
+        let hasSeats = false;
         <% for (VolSiege volSiege : volSieges) { %>
             <% 
                 PrixVol prixVol = prixVols.stream()
@@ -127,31 +134,60 @@
             if (input_<%= volSiege.getTypeSiege().getId() %>) {
                 let count = parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value) || 0;
                 total += count * <%= prix %>;
+                if (count > 0) hasSeats = true;
             }
         <% } %>
         document.getElementById('totalPrice').textContent = total.toFixed(2);
+        updateSubmitButton(hasSeats);
+    }
+
+    function updateSubmitButton(hasSeats) {
+        let passeportInput = document.getElementById('passeport');
+        let reserveBtn = document.querySelector('.reserve-btn');
+        let isFileSelected = passeportInput.files && passeportInput.files.length > 0;
+        reserveBtn.disabled = !(hasSeats && isFileSelected);
     }
 
     function submitReservation() {
+        let form = document.getElementById('reservationForm');
+        let passeportInput = document.getElementById('passeport');
         let params = [];
+
         <% for (VolSiege volSiege : volSieges) { %>
             let input_<%= volSiege.getTypeSiege().getId() %> = document.querySelector('input[name="nombre_<%= volSiege.getTypeSiege().getId() %>"]');
             if (input_<%= volSiege.getTypeSiege().getId() %> && parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value) > 0) {
                 params.push('<%= volSiege.getTypeSiege().getId() %>:' + parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value));
             }
         <% } %>
+
         if (params.length === 0) {
-            alert("Veuillez selectionner au moins une place à reserver.");
+            alert("Veuillez sélectionner au moins une place à réserver.");
             return;
         }
-        let form = document.getElementById('reservationForm');
-        let input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'allParams';
-        input.value = params.join(',');
-        form.appendChild(input);
+        if (!passeportInput.files || passeportInput.files.length === 0) {
+            alert("Veuillez téléverser une image de votre passeport.");
+            return;
+        }
+
+        let allParamsInput = document.querySelector('input[name="allParams"]');
+        if (!allParamsInput) {
+            allParamsInput = document.createElement('input');
+            allParamsInput.type = 'hidden';
+            allParamsInput.name = 'allParams';
+            form.appendChild(allParamsInput);
+        }
+        allParamsInput.value = params.join(',');
+
         form.submit();
     }
+
+    // Ajouter des écouteurs pour activer/désactiver le bouton
+    document.getElementById('passeport').addEventListener('change', function() {
+        updateTotal();
+    });
+
+    // Appeler updateTotal au chargement pour initialiser l'état du bouton
+    document.addEventListener('DOMContentLoaded', updateTotal);
 </script>
 </body>
 </html>

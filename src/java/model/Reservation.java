@@ -15,6 +15,7 @@ public class Reservation {
     private List<TypeSiege> typeSieges;
     private List<Integer> nombres;
     private Timestamp date;
+    private byte[] passeport;
 
     // Constructeurs
     public Reservation() {
@@ -22,17 +23,17 @@ public class Reservation {
         this.nombres = new ArrayList<>();
     }
 
-    public Reservation(int id, Vol vol, Utilisateur utilisateur, List<TypeSiege> typeSieges, List<Integer> nombres, Timestamp date) {
+    public Reservation(int id, Vol vol, Utilisateur utilisateur, List<TypeSiege> typeSieges, List<Integer> nombres, Timestamp date, byte[] passeport) {
         this.id = id;
         this.vol = vol;
         this.utilisateur = utilisateur;
         this.typeSieges = (typeSieges != null) ? typeSieges : new ArrayList<>();
         this.nombres = (nombres != null) ? nombres : new ArrayList<>();
         this.date = date;
+        this.passeport = passeport;
     }
 
-    // Constructeur pour compatibilité avec l'ancienne structure
-    public Reservation(int id, Vol vol, Utilisateur utilisateur, TypeSiege typeSiege, int nombre, Timestamp date) {
+    public Reservation(int id, Vol vol, Utilisateur utilisateur, TypeSiege typeSiege, int nombre, Timestamp date, byte[] passeport) {
         this.id = id;
         this.vol = vol;
         this.utilisateur = utilisateur;
@@ -43,6 +44,7 @@ public class Reservation {
             this.nombres.add(nombre);
         }
         this.date = date;
+        this.passeport = passeport;
     }
 
     // Getters et Setters
@@ -92,6 +94,14 @@ public class Reservation {
 
     public void setDate(Timestamp date) {
         this.date = date;
+    }
+
+    public byte[] getPasseport() {
+        return passeport;
+    }
+
+    public void setPasseport(byte[] passeport) {
+        this.passeport = passeport;
     }
 
     // Méthodes pour ajouter un TypeSiege et un nombre
@@ -154,7 +164,7 @@ public class Reservation {
                 throw new IllegalStateException("Le nombre de TypeSiege et de nombres doit être identique.");
             }
 
-            String sql = "INSERT INTO Reservation (id_vol, id_utilisateur, id_typeSiege, nombre, date) VALUES (?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO Reservation (id_vol, id_utilisateur, id_typeSiege, nombre, date, passeport) VALUES (?, ?, ?, ?, ?, ?)";
             st = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
 
             for (int i = 0; i < typeSieges.size(); i++) {
@@ -163,6 +173,11 @@ public class Reservation {
                 st.setInt(3, this.getTypeSieges().get(i).getId());
                 st.setInt(4, this.getNombres().get(i));
                 st.setTimestamp(5, this.getDate());
+                if (this.getPasseport() != null) {
+                    st.setBytes(6, this.getPasseport());
+                } else {
+                    st.setNull(6, java.sql.Types.BINARY);
+                }
                 st.executeUpdate();
 
                 generatedKeys = st.getGeneratedKeys();
@@ -210,6 +225,7 @@ public class Reservation {
                 temp.setUtilisateur(Utilisateur.getById(conn, res.getInt("id_utilisateur")));
                 temp.addTypeSiegeAndNombre(TypeSiege.getById(conn, res.getInt("id_typeSiege")), res.getInt("nombre"));
                 temp.setDate(res.getTimestamp("date"));
+                temp.setPasseport(res.getBytes("passeport"));
                 tempReservations.add(temp);
             }
 
@@ -222,6 +238,10 @@ public class Reservation {
                         reservation.getDate().equals(temp.getDate())) {
                         reservation.getTypeSieges().addAll(temp.getTypeSieges());
                         reservation.getNombres().addAll(temp.getNombres());
+                        // Conserver le passeport du premier enregistrement (supposé identique pour la même réservation)
+                        if (reservation.getPasseport() == null && temp.getPasseport() != null) {
+                            reservation.setPasseport(temp.getPasseport());
+                        }
                         merged = true;
                         break;
                     }
@@ -267,6 +287,7 @@ public class Reservation {
                 temp.setUtilisateur(Utilisateur.getById(conn, res.getInt("id_utilisateur")));
                 temp.addTypeSiegeAndNombre(TypeSiege.getById(conn, res.getInt("id_typeSiege")), res.getInt("nombre"));
                 temp.setDate(res.getTimestamp("date"));
+                temp.setPasseport(res.getBytes("passeport"));
                 tempReservations.add(temp);
             }
 
@@ -280,6 +301,10 @@ public class Reservation {
                         reservation.getDate().equals(temp.getDate())) {
                         reservation.getTypeSieges().addAll(temp.getTypeSieges());
                         reservation.getNombres().addAll(temp.getNombres());
+                        // Conserver le passeport du premier enregistrement (supposé identique)
+                        if (reservation.getPasseport() == null && temp.getPasseport() != null) {
+                            reservation.setPasseport(temp.getPasseport());
+                        }
                     } else {
                         throw new SQLException("Plusieurs réservations trouvées pour le même utilisateur et vol avec des dates différentes.");
                     }

@@ -60,7 +60,8 @@ CREATE TABLE Reservation(
     id_utilisateur INT REFERENCES Utilisateur(id) NOT NULL,
     id_typeSiege INT REFERENCES TypeSiege(id) NOT NULL,
     nombre INT NOT NULL,
-    date TIMESTAMP NOT NULL
+    date TIMESTAMP NOT NULL,
+    passeport BYTEA
 );
 
 CREATE TABLE Promotion(
@@ -76,4 +77,5 @@ CREATE TABLE ReservationConfig(
     heure_reservation DECIMAL,
     heure_annulation DECIMAL
 );
+
 
