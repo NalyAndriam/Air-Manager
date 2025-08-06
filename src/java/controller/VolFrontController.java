@@ -246,7 +246,11 @@ public ModelView reserve(
         // Vérifier la taille du fichier (max 2 Mo)
         long maxSize = 2 * 1024 * 1024; // 2 Mo
         if (passeport.getFileBytes().length > maxSize) {
-            throw new IllegalArgumentException("L'image du passeport ne doit pas dépasser 2 Mo.");
+            mv.addObject("errorMessage", "Veuilez choisir une image inferieure a 2Mo");
+            mv.addObject("vol", vol);
+            mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
+            mv.addObject("prixVols", PrixVol.getByVolId(conn, volId));
+            mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
         }
 
         Reservation reservation = new Reservation();
