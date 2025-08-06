@@ -21,6 +21,7 @@ import mg.emberframework.core.data.Session;
 import model.Database;
 import model.PrixVol;
 import model.Reservation;
+import model.ReservationConfig;
 import model.TypeSiege;
 import model.Utilisateur;
 import model.Ville;
@@ -203,10 +204,31 @@ public class VolFrontController {
                 throw new IllegalArgumentException("Utilisateur avec l'ID " + utilisateurId + " non trouvé.");
             }
 
+            // Vérification de l'heure de réservation
+            ReservationConfig config = ReservationConfig.getLatest(conn);
+            if (config == null) {
+                throw new IllegalArgumentException("Configuration de réservation non trouvée.");
+            }
+
+            long currentTime = System.currentTimeMillis();
+            long volDepartureTime = vol.getDepart().getTime();
+            long hoursBeforeFlight = (volDepartureTime - currentTime) / (1000 * 60 * 60); // Conversion en heures
+
+            if (hoursBeforeFlight < config.getHeureReservation()) {
+                mv.addObject("errorMessage", 
+                    "La réservation ne peut pas être effectuée. Il faut réserver au moins " + 
+                    config.getHeureReservation() + " heures avant le départ du vol.");
+                mv.addObject("vol", vol);
+                mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
+                mv.addObject("prixVols", PrixVol.getByVolId(conn, volId)); // Assuming PrixVol has a getByVolId method
+                mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
+                return mv;
+            }
+
             Reservation reservation = new Reservation();
             reservation.setVol(vol);
             reservation.setUtilisateur(utilisateur);
-            reservation.setDate(new Timestamp(System.currentTimeMillis()));
+            reservation.setDate(new Timestamp(currentTime));
 
             List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
             if (allParams != null && !allParams.isEmpty()) {
