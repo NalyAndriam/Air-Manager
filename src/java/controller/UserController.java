@@ -41,28 +41,33 @@ public class UserController {
 
     @Post
     @Url("/login")
-    public ModelView login (@RequestParameter("user") Utilisateur user) throws Exception{
-
-        Connection conn= Database.getConnection();
-
+    public ModelView login(@RequestParameter("user") Utilisateur user) throws Exception {
+        Connection conn = Database.getConnection();
         ModelView mv = new ModelView();
-        Utilisateur utilisateur= Utilisateur.login(conn, user.getEmail(), user.getMdp());
-        if(utilisateur != null){
-            String role = utilisateur.getRole().getNom();
-            session.add("user", utilisateur);
-            if(role.equals("admin")){
-                mv.setRedirect(true);
-                mv.setUrl("./vol");
-            }else{
-                mv.setUrl("/frontoffice/vol.jsp");    
-            }
 
-            
-        } else {
-            mv.setRedirect(true);
-            mv.setUrl("./login"); 
-            session.add("errorMessage", "Email ou mot de passe incorrect");
+        try {
+            Utilisateur utilisateur = Utilisateur.login(conn, user.getEmail(), user.getMdp());
+            if (utilisateur != null) {
+                String role = utilisateur.getRole().getNom();
+                if (role.equals("admin")) {
+                    mv.setRedirect(true);
+                    mv.setUrl("./vol");
+                } else {
+                    session.add("user", utilisateur); 
+                    mv.setRedirect(true);
+                    mv.setUrl("./user-vol");    
+                }
+            } else {
+                mv.setRedirect(true);
+                mv.setUrl("./login"); 
+                mv.addObject("errorMessage", "Email ou mot de passe incorrect");
+            }
+        } finally {
+            if (conn != null) {
+                conn.close();
+            }
         }
+        
         return mv;
     }
 

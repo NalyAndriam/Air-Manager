@@ -124,4 +124,25 @@ public class Promotion {
 
         return promotions;
     }
+
+    public static void deleteByVolId(Connection conn, int volId) throws Exception {
+        PreparedStatement st = null;
+        boolean creatingConn = false;
+
+        try {
+            if (conn == null) {
+                conn = Database.getConnection();
+                creatingConn = true;
+            }
+
+            String sql = "DELETE FROM Promotion WHERE id_vol = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, volId);
+            st.executeUpdate();
+
+        } finally {
+            if (st != null) st.close();
+            if (creatingConn && conn != null) conn.close();
+        }
+    }
 }

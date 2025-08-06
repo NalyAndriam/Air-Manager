@@ -95,4 +95,66 @@ public class VolSiege {
 
         return volSieges;
     }
+
+    public void update(Connection conn) throws Exception {
+        PreparedStatement st = null;
+        boolean creatingConn = false;
+
+        try {
+            if (conn == null) {
+                conn = Database.getConnection();
+                creatingConn = true;
+            }
+
+            String sql = "UPDATE VolSiege SET nombre = ? WHERE id_vol = ? AND id_typeSiege = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, this.getNombre());
+            st.setInt(2, this.getVol().getId());
+            st.setInt(3, this.getTypeSiege().getId());
+
+            int rowsAffected = st.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new SQLException("Échec de la mise à jour : aucun enregistrement trouvé pour id_vol = " + this.getVol().getId() + " et id_typeSiege = " + this.getTypeSiege().getId());
+            }
+
+        } finally {
+            if (st != null) st.close();
+            if (creatingConn && conn != null) conn.close();
+        }
+    }
+
+    public static VolSiege getByVolIdAndTypeSiegeId(Connection conn, int volId, int typeSiegeId) throws Exception {
+        PreparedStatement st = null;
+        ResultSet res = null;
+        VolSiege volSiege = null;
+        boolean creatingConn = false;
+
+        try {
+            if (conn == null) {
+                conn = Database.getConnection();
+                creatingConn = true;
+            }
+
+            String sql = "SELECT * FROM VolSiege WHERE id_vol = ? AND id_typeSiege = ?";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, volId);
+            st.setInt(2, typeSiegeId);
+            res = st.executeQuery();
+
+            if (res.next()) {
+                volSiege = new VolSiege();
+                volSiege.setId(res.getInt("id"));
+                volSiege.setVol(Vol.getById(conn, res.getInt("id_vol")));
+                volSiege.setTypeSiege(TypeSiege.getById(conn, res.getInt("id_typeSiege")));
+                volSiege.setNombre(res.getInt("nombre"));
+            }
+
+            return volSiege;
+
+        } finally {
+            if (res != null) res.close();
+            if (st != null) st.close();
+            if (creatingConn && conn != null) conn.close();
+        }
+    }
 }

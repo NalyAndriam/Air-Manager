@@ -3,26 +3,19 @@
         <h3><i class="fa-solid fa-plane sidebar-logo"></i> Air Manager</h3>     
     </div>          
     <div class="sidebar-menu">                  
-        <div class="menu-item has-submenu">             
-            <a href="#">                 
+        <div class="menu-item"> 
+            <a href="<%= request.getContextPath() %>/user-vol">                 
                 <i class="fa-solid fa-plane-departure menu-icon"></i>                 
-                <span class="menu-text">Vol</span>             
-            </a>             
-            <ul class="submenu">                 
-                <li><a href="<%= request.getContextPath() %>/vol/insert" class="current">Insertion</a></li>                 
-                <li><a href="<%= request.getContextPath() %>/vol">Liste</a></li>             
-            </ul>         
-        </div>                   
-        <div class="menu-item has-submenu">             
-            <a href="#">                 
-                <i class="fa-solid fa-gear menu-icon"></i>                 
-                <span class="menu-text">Parametres</span>             
-            </a>             
-            <ul class="submenu">                 
-                <li><a href="<%= request.getContextPath() %>/settings/reservation" class="current">Reservation</a></li>                 
-                <li><a href="<%= request.getContextPath() %>/settings/promotion">Promotion</a></li>             
-            </ul>         
-        </div>     
+                <span class="menu-text">Liste Vols</span>             
+            </a> 
+        </div>
+
+        <div class="menu-item"> 
+            <a href="<%= request.getContextPath() %>/user-resa">                 
+                <i class="fa-solid fa-plane-departure menu-icon"></i>                 
+                <span class="menu-text">Liste Reservations</span>             
+            </a> 
+        </div>
         <div class="menu-item"> 
             <a href="<%= request.getContextPath() %>/login">                 
                 <i class="fa-solid fa-right-from-bracket menu-icon"></i>                 
