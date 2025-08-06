@@ -16,6 +16,12 @@
                 <span class="menu-text">Liste Reservations</span>             
             </a> 
         </div>
+        <div class="menu-item"> 
+            <a href="<%= request.getContextPath() %>/login">                 
+                <i class="fa-solid fa-right-from-bracket menu-icon"></i>                 
+                <span class="menu-text">Se deconnecter</span>             
+            </a> 
+        </div>
 
     </div> 
 </div>  

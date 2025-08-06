@@ -17,6 +17,7 @@ import mg.emberframework.core.data.ModelView;
 import model.Avion;
 import model.Database;
 import model.PrixVol;
+import model.Promotion;
 import model.TypeSiege;
 import model.Ville;
 import model.Vol;
@@ -246,11 +247,12 @@ public class VolController {
 
             Vol vol = Vol.getById(conn, id);
             if (vol == null) {
-                mv.addObject("errorMessage", "Vol avec l'ID " + id + " non trouve.");
-                mv.setUrl("/backoffice/error.jsp"); // Redirect to error.jsp
+                mv.addObject("errorMessage", "Vol avec l'ID " + id + " non trouvé.");
+                mv.setUrl("/backoffice/error.jsp");
                 return mv;
             }
 
+            Promotion.deleteByVolId(conn, id);
             PrixVol.deleteByVolId(conn, id);
             VolSiege.deleteByVolId(conn, id);
             vol.delete(conn);
@@ -269,9 +271,8 @@ public class VolController {
                 }
             }
             mv.addObject("errorMessage", "Erreur lors de la suppression du vol : " + e.getMessage());
-            mv.setUrl("/backoffice/error.jsp"); // Redirect to error.jsp
+            mv.setUrl("/backoffice/error.jsp");
             e.printStackTrace();
-            return mv;
         } finally {
             if (conn != null) {
                 try {
@@ -279,9 +280,8 @@ public class VolController {
                     conn.close();
                 } catch (SQLException e) {
                     mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion : " + e.getMessage());
-                    mv.setUrl("/backoffice/error.jsp"); // Redirect to error.jsp
+                    mv.setUrl("/backoffice/error.jsp");
                     e.printStackTrace();
-                    return mv;
                 }
             }
         }
