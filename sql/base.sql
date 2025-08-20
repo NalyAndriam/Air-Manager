@@ -69,13 +69,29 @@ CREATE TABLE Promotion(
     id_vol INT REFERENCES Vol(id),
     id_typeSiege INT REFERENCES TypeSiege(id),
     nombre DECIMAL NOT NULL,
-    pourcentage DECIMAL NOT NULL
+    pourcentage DECIMAL NOT NULL,
+    date_fin DATE NOT NULL 
 );
 
 CREATE TABLE ReservationConfig(
     id SERIAL PRIMARY KEY,
     heure_reservation DECIMAL,
     heure_annulation DECIMAL
+);
+
+CREATE TABLE Promotion_Alea(
+    id SERIAL PRIMARY KEY,
+    nombre DECIMAL NOT NULL,
+    date_fin DATE NOT NULL,
+    prix DECIMAL NOT NULL,
+    id_typeSiege INT REFERENCES TypeSiege(id),
+    id_vol INT REFERENCES Vol(id)
+);
+
+CREATE TABLE Paiement(
+    id SERIAL PRIMARY KEY,
+    id_reservation INT REFERENCES Reservation(id),
+    date_paiement DATE
 );
 
 

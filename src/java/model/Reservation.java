@@ -378,4 +378,59 @@ public class Reservation {
             if (creatingConn && conn != null) conn.close();
         }
     }
+
+    public static Reservation getById(Connection conn, int id) throws Exception {
+        PreparedStatement st = null;
+        ResultSet res = null;
+        Reservation reservation = null;
+        List<Reservation> tempReservations = new ArrayList<>();
+
+        try {
+            String sql = "SELECT * FROM Reservation WHERE id = ? ORDER BY date";
+            st = conn.prepareStatement(sql);
+            st.setInt(1, id);
+            res = st.executeQuery();
+
+            while (res.next()) {
+                Reservation temp = new Reservation();
+                temp.setId(res.getInt("id"));
+                temp.setVol(Vol.getById(conn, res.getInt("id_vol")));
+                temp.setUtilisateur(Utilisateur.getById(conn, res.getInt("id_utilisateur")));
+                temp.addTypeSiegeAndNombre(TypeSiege.getById(conn, res.getInt("id_typeSiege")), res.getInt("nombre"));
+                temp.setDate(res.getTimestamp("date"));
+                temp.setPasseport(res.getBytes("passeport"));
+                tempReservations.add(temp);
+            }
+
+            // Regrouper les réservations si plusieurs lignes pour le même ID
+            if (!tempReservations.isEmpty()) {
+                reservation = tempReservations.get(0);
+                for (int i = 1; i < tempReservations.size(); i++) {
+                    Reservation temp = tempReservations.get(i);
+                    if (reservation.getVol().getId() == temp.getVol().getId() &&
+                        reservation.getUtilisateur().getId() == temp.getUtilisateur().getId() &&
+                        reservation.getDate().equals(temp.getDate())) {
+                        reservation.getTypeSieges().addAll(temp.getTypeSieges());
+                        reservation.getNombres().addAll(temp.getNombres());
+                        if (reservation.getPasseport() == null && temp.getPasseport() != null) {
+                            reservation.setPasseport(temp.getPasseport());
+                        }
+                    } else {
+                        throw new SQLException("Incohérence dans les données de la réservation avec l'ID " + id);
+                    }
+                }
+            }
+
+        } finally {
+            if (res != null) res.close();
+            if (st != null) st.close();
+        }
+
+        return reservation;
+    }
+
+    public boolean estPaye(Connection conn) throws Exception {
+        List<Paiement> paiements = Paiement.getByReservationId(conn, this.getId());
+        return !paiements.isEmpty();
+    }
 }

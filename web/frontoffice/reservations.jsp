@@ -2,17 +2,28 @@
 <%@ page import="model.*" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Base64" %>
+<%@ page import="java.sql.Connection" %>
 <%
     Utilisateur user = (Utilisateur) session.getAttribute("user");
     if (user == null) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
+    Connection conn = null;
     List<Reservation> reservations = null;
     try {
-        reservations = Reservation.getByUtilisateurId(null, user.getId());
+        conn = Database.getConnection();
+        reservations = Reservation.getByUtilisateurId(conn, user.getId());
     } catch (Exception e) {
         request.setAttribute("errorMessage", "Erreur lors de la récupération des réservations: " + e.getMessage());
+    } finally {
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (Exception e) {
+                request.setAttribute("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
+            }
+        }
     }
 %>
 <!DOCTYPE html>
@@ -51,6 +62,11 @@
                 <i class="fa-solid fa-exclamation-circle"></i> <%= request.getAttribute("errorMessage") %>
             </div>
         <% } %>
+        <% if (request.getAttribute("successMessage") != null) { %>
+            <div class="success-message" style="color: green; font-size: smaller;">
+                <i class="fa-solid fa-check-circle"></i> <%= request.getAttribute("successMessage") %>
+            </div>
+        <% } %>
 
         <% if (reservations != null && !reservations.isEmpty()) { %>
             <div class="reservations-list">
@@ -68,7 +84,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <% for (Reservation reservation : reservations) { %>
+                        <% 
+                            conn = Database.getConnection();
+                            for (Reservation reservation : reservations) {
+                                boolean isPaid = false;
+                                try {
+                                    isPaid = reservation.estPaye(conn);
+                                } catch (Exception e) {
+                                    request.setAttribute("errorMessage", "Erreur lors de la vérification du paiement: " + e.getMessage());
+                                }
+                        %>
                             <tr>
                                 <td><%= reservation.getVol().getVilleDepart().getNom() %></td>
                                 <td><%= reservation.getVol().getVilleArrivee().getNom() %></td>
@@ -115,9 +140,26 @@
                                             <i class="fa-solid fa-times"></i> Annuler
                                         </button>
                                     </form>
+                                    <% if (!isPaid) { %>
+                                        <form action="<%= request.getContextPath() %>/user-resa/pay" method="POST" style="display:inline;" onsubmit="return confirm('Voulez-vous vraiment effectuer le paiement pour cette réservation ?');">
+                                            <input type="hidden" name="reservationId" value="<%= reservation.getId() %>">
+                                            <button type="submit" class="pay-btn">
+                                                <i class="fa-solid fa-credit-card"></i> Payer
+                                            </button>
+                                        </form>
+                                    <% } %>
                                 </td>
                             </tr>
-                        <% } %>
+                        <% 
+                            }
+                            if (conn != null) {
+                                try {
+                                    conn.close();
+                                } catch (Exception e) {
+                                    request.setAttribute("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
+                                }
+                            }
+                        %>
                     </tbody>
                 </table>
 
@@ -242,5 +284,25 @@
         return date.toLocaleString('fr-FR', options);
     }
 </script>
+
+<style>
+    .pay-btn {
+        background-color: #28a745;
+        color: white;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+        margin-left: 0.5rem;
+        transition: background-color 0.2s;
+    }
+    .pay-btn:hover {
+        background-color: #218838;
+    }
+    .pay-btn i {
+        margin-right: 0.3rem;
+    }
+</style>
 </body>
 </html>

@@ -19,6 +19,7 @@ import mg.emberframework.core.data.File;
 import mg.emberframework.core.data.ModelView;
 import mg.emberframework.core.data.Session;
 import model.Database;
+import model.Paiement;
 import model.PrixVol;
 import model.Reservation;
 import model.ReservationConfig;
@@ -508,6 +509,70 @@ public ModelView reserve(
                 }
             }
             mv.addObject("errorMessage", "Erreur lors de l'annulation de la réservation : " + e.getMessage());
+            mv.setUrl("/frontoffice/reservations.jsp");
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion : " + e.getMessage());
+                    mv.setUrl("/frontoffice/error.jsp");
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return mv;
+    }
+
+    @Post
+    @Url("/user-resa/pay")
+    public ModelView payReservation(
+            @RequestParameter("reservationId") Integer reservationId) throws Exception {
+        Connection conn = null;
+        ModelView mv = new ModelView();
+
+        try {
+            conn = Database.getConnection();
+            conn.setAutoCommit(false);
+
+            // Récupérer la réservation
+            Reservation reservation = Reservation.getById(conn, reservationId);
+            if (reservation == null) {
+                throw new IllegalArgumentException("Réservation avec l'ID " + reservationId + " non trouvée.");
+            }
+
+            // Vérifier l'utilisateur connecté
+            Utilisateur user = (Utilisateur) session.get("user");
+            if (user == null || user.getId() != reservation.getUtilisateur().getId()) {
+                throw new IllegalArgumentException("Vous n'êtes pas autorisé à effectuer un paiement pour cette réservation.");
+            }
+
+            // Créer l'objet Paiement avec la date actuelle
+            Paiement paiement = new Paiement();
+            paiement.setReservation(reservation);
+            paiement.setDatePaiement(new java.sql.Date(System.currentTimeMillis()));
+
+            // Insérer le paiement dans la base de données
+            paiement.insert(conn);
+
+            conn.commit();
+
+            mv.setRedirect(true);
+            mv.setUrl("../user-resa");
+            mv.addObject("successMessage", "Paiement effectué avec succès pour la réservation ID " + reservationId);
+
+        } catch (Exception e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            mv.addObject("errorMessage", "Erreur lors du paiement : " + e.getMessage());
             mv.setUrl("/frontoffice/reservations.jsp");
             e.printStackTrace();
         } finally {
