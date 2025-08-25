@@ -154,12 +154,6 @@ public class Reservation {
                 creatingConn = true;
             }
 
-            // Vérifier s'il existe déjà une réservation pour cet utilisateur et ce vol
-            Reservation existingReservation = getByUtilisateurAndVolId(conn, this.getUtilisateur().getId(), this.getVol().getId());
-            if (existingReservation != null) {
-                throw new SQLException("Une réservation existe déjà pour cet utilisateur et ce vol.");
-            }
-
             if (typeSieges.size() != nombres.size()) {
                 throw new IllegalStateException("Le nombre de TypeSiege et de nombres doit être identique.");
             }
@@ -261,11 +255,11 @@ public class Reservation {
     }
 
     // Récupérer la réservation d'un utilisateur pour un vol spécifique
-    public static Reservation getByUtilisateurAndVolId(Connection conn, int utilisateurId, int volId) throws Exception {
+    public static List<Reservation> getByUtilisateurAndVolId(Connection conn, int utilisateurId, int volId) throws Exception {
         PreparedStatement st = null;
         ResultSet res = null;
         boolean creatingConn = false;
-        Reservation reservation = null;
+        List<Reservation> reservations = new ArrayList<>();
         List<Reservation> tempReservations = new ArrayList<>();
 
         try {
@@ -292,26 +286,27 @@ public class Reservation {
             }
 
             // Regrouper les réservations par id_vol, id_utilisateur et date
-            if (!tempReservations.isEmpty()) {
-                reservation = tempReservations.get(0);
-                for (int i = 1; i < tempReservations.size(); i++) {
-                    Reservation temp = tempReservations.get(i);
+            for (Reservation temp : tempReservations) {
+                boolean merged = false;
+                for (Reservation reservation : reservations) {
                     if (reservation.getVol().getId() == temp.getVol().getId() &&
                         reservation.getUtilisateur().getId() == temp.getUtilisateur().getId() &&
                         reservation.getDate().equals(temp.getDate())) {
                         reservation.getTypeSieges().addAll(temp.getTypeSieges());
                         reservation.getNombres().addAll(temp.getNombres());
-                        // Conserver le passeport du premier enregistrement (supposé identique)
                         if (reservation.getPasseport() == null && temp.getPasseport() != null) {
                             reservation.setPasseport(temp.getPasseport());
                         }
-                    } else {
-                        throw new SQLException("Plusieurs réservations trouvées pour le même utilisateur et vol avec des dates différentes.");
+                        merged = true;
+                        break;
                     }
+                }
+                if (!merged) {
+                    reservations.add(temp);
                 }
             }
 
-            return reservation;
+            return reservations;
 
         } finally {
             if (res != null) res.close();

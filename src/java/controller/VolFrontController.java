@@ -146,42 +146,42 @@ public class VolFrontController {
     public ModelView showVolDetails(@RequestParameter("volId") Integer volId) throws Exception {
         Connection conn = null;
         ModelView mv = new ModelView();
-
         try {
             conn = Database.getConnection();
             Vol vol = Vol.getById(conn, volId);
-            List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
-            List<PrixVol> prixVols = PrixVol.getByVolId(conn, volId);
-
             if (vol == null) {
                 mv.addObject("errorMessage", "Vol avec l'ID " + volId + " non trouvé.");
                 mv.setUrl("/frontoffice/error.jsp");
-            } else {
-                mv.addObject("vol", vol);
-                mv.addObject("volSieges", volSieges);
-                mv.addObject("prixVols", prixVols);
-                mv.setUrl("/frontoffice/volDetails.jsp");
+                return mv;
             }
-
+            List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
+            List<PrixVol> prixVols = PrixVol.getByVolId(conn, volId);
+            mv.addObject("vol", vol);
+            mv.addObject("volSieges", volSieges != null ? volSieges : new ArrayList<VolSiege>());
+            mv.addObject("prixVols", prixVols != null ? prixVols : new ArrayList<PrixVol>());
+            mv.setUrl("/frontoffice/volDetails.jsp");
+        } catch (SQLException e) {
+            mv.addObject("errorMessage", "Erreur SQL lors du chargement des détails du vol: " + e.getMessage());
+            mv.setUrl("/frontoffice/error.jsp");
+            e.printStackTrace();
         } catch (Exception e) {
-            mv.addObject("errorMessage", "Erreur lors du chargement des détails du vol: " + e.getMessage());
+            mv.addObject("errorMessage", "Erreur inattendue lors du chargement des détails du vol: " + e.getMessage());
             mv.setUrl("/frontoffice/error.jsp");
             e.printStackTrace();
         } finally {
             if (conn != null) {
                 try {
                     conn.close();
-                } catch (Exception e) {
+                } catch (SQLException e) {
                     mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion: " + e.getMessage());
                     mv.setUrl("/frontoffice/error.jsp");
                     e.printStackTrace();
                 }
             }
         }
-
         return mv;
     }
-
+    
 @Post
 @Url("/user-vol/reserve")
 public ModelView reserve(
@@ -208,23 +208,21 @@ public ModelView reserve(
 
         // Vérification de l'heure de réservation
         ReservationConfig config = ReservationConfig.getLatest(conn);
-        if (config == null) {
-            throw new IllegalArgumentException("Configuration de réservation non trouvée.");
-        }
+        if (config != null) {
+            long currentTime = System.currentTimeMillis();
+            long volDepartureTime = vol.getDepart().getTime();
+            long hoursBeforeFlight = (volDepartureTime - currentTime) / (1000 * 60 * 60); // Conversion en heures
 
-        long currentTime = System.currentTimeMillis();
-        long volDepartureTime = vol.getDepart().getTime();
-        long hoursBeforeFlight = (volDepartureTime - currentTime) / (1000 * 60 * 60); // Conversion en heures
-
-        if (hoursBeforeFlight < config.getHeureReservation()) {
-            mv.addObject("errorMessage", 
-                "La réservation ne peut pas être effectuée. Il faut réserver au moins " + 
-                config.getHeureReservation() + " heures avant le départ du vol.");
-            mv.addObject("vol", vol);
-            mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
-            mv.addObject("prixVols", PrixVol.getByVolId(conn, volId));
-            mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
-            return mv;
+            if (hoursBeforeFlight < config.getHeureReservation()) {
+                mv.addObject("errorMessage", 
+                    "La réservation ne peut pas être effectuée. Il faut réserver au moins " + 
+                    config.getHeureReservation() + " heures avant le départ du vol.");
+                mv.addObject("vol", vol);
+                mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
+                mv.addObject("prixVols", PrixVol.getByVolId(conn, volId));
+                mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
+                return mv;
+            }
         }
 
         // Vérification de l'image du passeport
@@ -234,6 +232,7 @@ public ModelView reserve(
             mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
             mv.addObject("prixVols", PrixVol.getByVolId(conn, volId));
             mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
+            return mv;
         }
 
         // Vérifier l'extension du fichier pour s'assurer qu'il s'agit d'une image
@@ -247,17 +246,18 @@ public ModelView reserve(
         // Vérifier la taille du fichier (max 2 Mo)
         long maxSize = 2 * 1024 * 1024; // 2 Mo
         if (passeport.getFileBytes().length > maxSize) {
-            mv.addObject("errorMessage", "Veuilez choisir une image inferieure a 2Mo");
+            mv.addObject("errorMessage", "Veuillez choisir une image inferieure a 2Mo");
             mv.addObject("vol", vol);
             mv.addObject("volSieges", VolSiege.getByVolId(conn, volId));
             mv.addObject("prixVols", PrixVol.getByVolId(conn, volId));
             mv.setUrl("/frontoffice/volDetails.jsp?volId=" + volId);
+            return mv;
         }
 
         Reservation reservation = new Reservation();
         reservation.setVol(vol);
         reservation.setUtilisateur(utilisateur);
-        reservation.setDate(new Timestamp(currentTime));
+        reservation.setDate(new Timestamp(System.currentTimeMillis()));
         reservation.setPasseport(passeport.getFileBytes());
 
         List<VolSiege> volSieges = VolSiege.getByVolId(conn, volId);
@@ -428,58 +428,53 @@ public ModelView reserve(
         return mv;
     }
 
-    @Post
-    @Url("/user-vol/cancel")
-    public ModelView cancelReservation(@RequestParameter("reservationId") Integer reservationId) throws Exception {
-        Connection conn = null;
-        ModelView mv = new ModelView();
+@Post
+@Url("/user-vol/cancel")
+public ModelView cancelReservation(@RequestParameter("reservationId") Integer reservationId) throws Exception {
+    Connection conn = null;
+    ModelView mv = new ModelView();
 
-        try {
-            conn = Database.getConnection();
-            conn.setAutoCommit(false);
+    try {
+        conn = Database.getConnection();
+        conn.setAutoCommit(false);
 
-            // Récupérer la réservation
-            Reservation reservation = null;
-            PreparedStatement st = conn.prepareStatement("SELECT * FROM Reservation WHERE id = ?");
-            st.setInt(1, reservationId);
-            ResultSet res = st.executeQuery();
-            List<Reservation> tempReservations = new ArrayList<>();
+        // Récupérer la réservation
+        Reservation reservation = null;
+        PreparedStatement st = conn.prepareStatement("SELECT * FROM Reservation WHERE id = ?");
+        st.setInt(1, reservationId);
+        ResultSet res = st.executeQuery();
+        List<Reservation> tempReservations = new ArrayList<>();
 
-            while (res.next()) {
-                Reservation temp = new Reservation();
-                temp.setId(res.getInt("id"));
-                temp.setVol(Vol.getById(conn, res.getInt("id_vol")));
-                temp.setUtilisateur(Utilisateur.getById(conn, res.getInt("id_utilisateur")));
-                temp.addTypeSiegeAndNombre(TypeSiege.getById(conn, res.getInt("id_typeSiege")), res.getInt("nombre"));
-                temp.setDate(res.getTimestamp("date"));
-                tempReservations.add(temp);
+        while (res.next()) {
+            Reservation temp = new Reservation();
+            temp.setId(res.getInt("id"));
+            temp.setVol(Vol.getById(conn, res.getInt("id_vol")));
+            temp.setUtilisateur(Utilisateur.getById(conn, res.getInt("id_utilisateur")));
+            temp.addTypeSiegeAndNombre(TypeSiege.getById(conn, res.getInt("id_typeSiege")), res.getInt("nombre"));
+            temp.setDate(res.getTimestamp("date"));
+            tempReservations.add(temp);
+        }
+        res.close();
+        st.close();
+
+        if (!tempReservations.isEmpty()) {
+            reservation = tempReservations.get(0);
+            for (int i = 1; i < tempReservations.size(); i++) {
+                Reservation temp = tempReservations.get(i);
+                reservation.getTypeSieges().addAll(temp.getTypeSieges());
+                reservation.getNombres().addAll(temp.getNombres());
             }
-            res.close();
-            st.close();
+        }
 
-            if (!tempReservations.isEmpty()) {
-                reservation = tempReservations.get(0);
-                for (int i = 1; i < tempReservations.size(); i++) {
-                    Reservation temp = tempReservations.get(i);
-                    reservation.getTypeSieges().addAll(temp.getTypeSieges());
-                    reservation.getNombres().addAll(temp.getNombres());
-                }
-            }
+        if (reservation == null) {
+            mv.addObject("errorMessage", "Réservation avec l'ID " + reservationId + " non trouvée.");
+            mv.setUrl("/frontoffice/reservations.jsp");
+            return mv;
+        }
 
-            if (reservation == null) {
-                mv.addObject("errorMessage", "Réservation avec l'ID " + reservationId + " non trouvée.");
-                mv.setUrl("/frontoffice/reservations.jsp");
-                return mv;
-            }
-
-            // Vérification de l'heure d'annulation
-            ReservationConfig config = ReservationConfig.getLatest(conn);
-            if (config == null) {
-                mv.addObject("errorMessage", "Configuration de réservation non trouvée.");
-                mv.setUrl("/frontoffice/reservations.jsp");
-                return mv;
-            }
-
+        // Vérification de l'heure d'annulation
+        ReservationConfig config = ReservationConfig.getLatest(conn);
+        if (config != null) {
             long currentTime = System.currentTimeMillis();
             long volDepartureTime = reservation.getVol().getDepart().getTime();
             long hoursBeforeFlight = (volDepartureTime - currentTime) / (1000 * 60 * 60); // Conversion en heures
@@ -491,41 +486,42 @@ public ModelView reserve(
                 mv.setUrl("/frontoffice/reservations.jsp");
                 return mv;
             }
-
-            // Supprimer la réservation et mettre à jour les sièges
-            Reservation.deleteById(conn, reservationId);
-
-            conn.commit();
-
-            mv.setRedirect(true);
-            mv.setUrl("../user-resa");
-
-        } catch (Exception e) {
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
-            mv.addObject("errorMessage", "Erreur lors de l'annulation de la réservation : " + e.getMessage());
-            mv.setUrl("/frontoffice/reservations.jsp");
-            e.printStackTrace();
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion : " + e.getMessage());
-                    mv.setUrl("/frontoffice/error.jsp");
-                    e.printStackTrace();
-                }
-            }
         }
 
-        return mv;
+        // Supprimer la réservation et mettre à jour les sièges
+        Reservation.deleteById(conn, reservationId);
+
+        conn.commit();
+
+        mv.setRedirect(true);
+        mv.setUrl("../user-resa");
+
+    } catch (Exception e) {
+        if (conn != null) {
+            try {
+                conn.rollback();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+        mv.addObject("errorMessage", "Erreur lors de l'annulation de la réservation : " + e.getMessage());
+        mv.setUrl("/frontoffice/reservations.jsp");
+        e.printStackTrace();
+    } finally {
+        if (conn != null) {
+            try {
+                conn.setAutoCommit(true);
+                conn.close();
+            } catch (SQLException e) {
+                mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion : " + e.getMessage());
+                mv.setUrl("/frontoffice/error.jsp");
+                e.printStackTrace();
+            }
+        }
     }
+
+    return mv;
+}
 
     @Post
     @Url("/user-resa/pay")

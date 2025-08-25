@@ -40,6 +40,78 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
+<style>
+    /* Button container for proper spacing */
+    .actions-container {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Base button styles */
+    .generate-btn, .cancel-btn, .pay-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.6rem 1.2rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        white-space: nowrap;
+    }
+
+    /* Generate PDF button */
+    .generate-btn {
+        background-color: #1e90ff; /* Blue for PDF generation */
+        color: white;
+    }
+    .generate-btn:hover {
+        background-color: #1c86ee;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .generate-btn i {
+        margin-right: 0.4rem;
+    }
+
+    /* Cancel button */
+    .cancel-btn {
+        background-color: #dc3545; /* Red for cancel */
+        color: white;
+    }
+    .cancel-btn:hover {
+        background-color: #c82333;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .cancel-btn i {
+        margin-right: 0.4rem;
+    }
+
+    /* Pay button */
+    .pay-btn {
+        background-color: #28a745; /* Green for pay */
+        color: white;
+    }
+    .pay-btn:hover {
+        background-color: #218838;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .pay-btn i {
+        margin-right: 0.4rem;
+    }
+
+    /* Ensure buttons are well-spaced in the table cell */
+    td .actions-container form, td .actions-container button {
+        margin: 0;
+    }
+</style>
 <body>
 <div class="navbar">
     <div class="user-info">
@@ -120,7 +192,7 @@
                                     </ul>
                                 </td>
                                 <td><%= reservation.getDate() %></td>
-                                <td>
+                                <td class="actions-container">
                                     <button onclick="generatePDF(
                                         '<%= user.getNom() %>',
                                         '<%= reservation.getVol().getVilleDepart().getNom() %>',
@@ -137,14 +209,14 @@
                                     <form action="<%= request.getContextPath() %>/user-vol/cancel" method="POST" style="display:inline;" onsubmit="return confirm('Voulez-vous vraiment annuler cette réservation ?');">
                                         <input type="hidden" name="reservationId" value="<%= reservation.getId() %>">
                                         <button type="submit" class="cancel-btn">
-                                            <i class="fa-solid fa-times"></i> Annuler
+                                            <i class="fa-solid fa-times"></i> 
                                         </button>
                                     </form>
                                     <% if (!isPaid) { %>
                                         <form action="<%= request.getContextPath() %>/user-resa/pay" method="POST" style="display:inline;" onsubmit="return confirm('Voulez-vous vraiment effectuer le paiement pour cette réservation ?');">
                                             <input type="hidden" name="reservationId" value="<%= reservation.getId() %>">
                                             <button type="submit" class="pay-btn">
-                                                <i class="fa-solid fa-credit-card"></i> Payer
+                                                <i class="fa-solid fa-credit-card"></i>
                                             </button>
                                         </form>
                                     <% } %>
