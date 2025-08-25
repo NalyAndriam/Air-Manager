@@ -41,75 +41,106 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <style>
-    /* Button container for proper spacing */
+    /* Container pour les boutons d'actions */
     .actions-container {
         display: flex;
-        gap: 0.75rem;
+        gap: 0.5rem;
         align-items: center;
         justify-content: center;
+        position: relative;
     }
 
-    /* Base button styles */
-    .generate-btn, .cancel-btn, .pay-btn {
+    /* Styles de base pour tous les boutons d'actions */
+    .action-btn {
+        position: relative;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.6rem 1.2rem;
+        width: 40px;
+        height: 40px;
         border: none;
         border-radius: 0.5rem;
-        font-size: 0.9rem;
-        font-weight: 500;
-        text-decoration: none;
+        font-size: 1rem;
         cursor: pointer;
-        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
-        white-space: nowrap;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    /* Generate PDF button */
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Bouton PDF - Bleu */
     .generate-btn {
-        background-color: #1e90ff; /* Blue for PDF generation */
+        background-color: #1e90ff;
         color: white;
     }
-    .generate-btn:hover {
-        background-color: #1c86ee;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .generate-btn i {
-        margin-right: 0.4rem;
-    }
 
-    /* Cancel button */
+    /* Bouton Annuler - Rouge */
     .cancel-btn {
-        background-color: #dc3545; /* Red for cancel */
+        background-color: #dc3545;
         color: white;
     }
-    .cancel-btn:hover {
-        background-color: #c82333;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .cancel-btn i {
-        margin-right: 0.4rem;
-    }
 
-    /* Pay button */
+    /* Bouton Payer - Vert */
     .pay-btn {
-        background-color: #28a745; /* Green for pay */
+        background-color: #28a745;
         color: white;
     }
-    .pay-btn:hover {
-        background-color: #218838;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .pay-btn i {
-        margin-right: 0.4rem;
+
+    /* Styles des tooltips */
+    .tooltip {
+        position: absolute;
+        bottom: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: white;
+        padding: 0.5rem 0.8rem;
+        border-radius: 0.375rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 1000;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
-    /* Ensure buttons are well-spaced in the table cell */
-    td .actions-container form, td .actions-container button {
+    /* Petite flèche du tooltip */
+    .tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border: 6px solid transparent;
+        border-top-color: #333;
+    }
+
+    /* Affichage du tooltip au survol */
+    .action-btn:hover .tooltip {
+        opacity: 1;
+        visibility: visible;
+        bottom: 55px;
+    }
+
+    /* Style pour les formulaires inline */
+    .actions-container form {
         margin: 0;
+        display: contents;
+    }
+
+    /* Amélioration de l'espacement des cellules d'actions */
+    td.actions-cell {
+        padding: 1rem;
+        text-align: center;
+        min-width: 150px;
     }
 </style>
 <body>
@@ -192,34 +223,41 @@
                                     </ul>
                                 </td>
                                 <td><%= reservation.getDate() %></td>
-                                <td class="actions-container">
-                                    <button onclick="generatePDF(
-                                        '<%= user.getNom() %>',
-                                        '<%= reservation.getVol().getVilleDepart().getNom() %>',
-                                        '<%= reservation.getVol().getVilleArrivee().getNom() %>',
-                                        '<%= reservation.getVol().getDepart() %>',
-                                        '<%= reservation.getVol().getArrivee() %>',
-                                        '<%= String.join(", ", reservation.getTypeSieges().stream().map(TypeSiege::getNom).toList()) %>',
-                                        '<%= reservation.getNombres().toString().replaceAll("[\\[\\]]", "") %>',
-                                        '<%= reservation.getDate() %>',
-                                        '<%= reservation.getPasseport() != null ? Base64.getEncoder().encodeToString(reservation.getPasseport()) : "" %>'
-                                    )" class="generate-btn">
-                                        <i class="fa-solid fa-file-pdf"></i> 
-                                    </button>
-                                    <form action="<%= request.getContextPath() %>/user-vol/cancel" method="POST" style="display:inline;" onsubmit="return confirm('Voulez-vous vraiment annuler cette réservation ?');">
-                                        <input type="hidden" name="reservationId" value="<%= reservation.getId() %>">
-                                        <button type="submit" class="cancel-btn">
-                                            <i class="fa-solid fa-times"></i> 
+                                <td class="actions-cell">
+                                    <div class="actions-container">
+                                        <button onclick="generatePDF(
+                                            '<%= user.getNom() %>',
+                                            '<%= reservation.getVol().getVilleDepart().getNom() %>',
+                                            '<%= reservation.getVol().getVilleArrivee().getNom() %>',
+                                            '<%= reservation.getVol().getDepart() %>',
+                                            '<%= reservation.getVol().getArrivee() %>',
+                                            '<%= String.join(", ", reservation.getTypeSieges().stream().map(TypeSiege::getNom).toList()) %>',
+                                            '<%= reservation.getNombres().toString().replaceAll("[\\[\\]]", "") %>',
+                                            '<%= reservation.getDate() %>',
+                                            '<%= reservation.getPasseport() != null ? Base64.getEncoder().encodeToString(reservation.getPasseport()) : "" %>'
+                                        )" class="action-btn generate-btn">
+                                            <i class="fa-solid fa-file-pdf"></i>
+                                            <div class="tooltip">Générer PDF</div>
                                         </button>
-                                    </form>
-                                    <% if (!isPaid) { %>
-                                        <form action="<%= request.getContextPath() %>/user-resa/pay" method="POST" style="display:inline;" onsubmit="return confirm('Voulez-vous vraiment effectuer le paiement pour cette réservation ?');">
+                                        
+                                        <form action="<%= request.getContextPath() %>/user-vol/cancel" method="POST" onsubmit="return confirm('Voulez-vous vraiment annuler cette réservation ?');">
                                             <input type="hidden" name="reservationId" value="<%= reservation.getId() %>">
-                                            <button type="submit" class="pay-btn">
-                                                <i class="fa-solid fa-credit-card"></i>
+                                            <button type="submit" class="action-btn cancel-btn">
+                                                <i class="fa-solid fa-times"></i>
+                                                <div class="tooltip">Annuler</div>
                                             </button>
                                         </form>
-                                    <% } %>
+                                        
+                                        <% if (!isPaid) { %>
+                                            <form action="<%= request.getContextPath() %>/user-resa/pay" method="POST" onsubmit="return confirm('Voulez-vous vraiment effectuer le paiement pour cette réservation ?');">
+                                                <input type="hidden" name="reservationId" value="<%= reservation.getId() %>">
+                                                <button type="submit" class="action-btn pay-btn">
+                                                    <i class="fa-solid fa-credit-card"></i>
+                                                    <div class="tooltip">Payer</div>
+                                                </button>
+                                            </form>
+                                        <% } %>
+                                    </div>
                                 </td>
                             </tr>
                         <% 
@@ -356,25 +394,5 @@
         return date.toLocaleString('fr-FR', options);
     }
 </script>
-
-<style>
-    .pay-btn {
-        background-color: #28a745;
-        color: white;
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        font-size: 0.9rem;
-        margin-left: 0.5rem;
-        transition: background-color 0.2s;
-    }
-    .pay-btn:hover {
-        background-color: #218838;
-    }
-    .pay-btn i {
-        margin-right: 0.3rem;
-    }
-</style>
 </body>
 </html>
