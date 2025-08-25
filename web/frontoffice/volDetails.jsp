@@ -122,30 +122,42 @@
     function updateTotal() {
         let total = 0;
         let hasSeats = false;
-        <% for (VolSiege volSiege : volSieges) { %>
-            <% 
-                PrixVol prixVol = prixVols.stream()
-                    .filter(p -> p.getTypeSiege().getId() == volSiege.getTypeSiege().getId())
-                    .findFirst()
-                    .orElse(null);
-                double prix = prixVol != null ? prixVol.getPrix() : 0.0;
-            %>
-            let input_<%= volSiege.getTypeSiege().getId() %> = document.querySelector('input[name="nombre_<%= volSiege.getTypeSiege().getId() %>"]');
-            if (input_<%= volSiege.getTypeSiege().getId() %>) {
-                let count = parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value) || 0;
-                total += count * <%= prix %>;
-                if (count > 0) hasSeats = true;
+        <% 
+            if (volSieges != null && !volSieges.isEmpty() && prixVols != null) {
+                for (VolSiege volSiege : volSieges) {
+                    PrixVol prixVol = prixVols.stream()
+                        .filter(p -> p.getTypeSiege().getId() == volSiege.getTypeSiege().getId())
+                        .findFirst()
+                        .orElse(null);
+                    if (prixVol != null) {
+        %>
+                        const input_<%= volSiege.getTypeSiege().getId() %> = document.getElementById('qty_<%= volSiege.getTypeSiege().getId() %>');
+                        if (input_<%= volSiege.getTypeSiege().getId() %>) {
+                            const qty_<%= volSiege.getTypeSiege().getId() %> = parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value) || 0;
+                            if (qty_<%= volSiege.getTypeSiege().getId() %> > 0) {
+                                hasSeats = true;
+                                total += qty_<%= volSiege.getTypeSiege().getId() %> * <%= prixVol.getPrix() %>;
+                            }
+                        }
+        <% 
+                    }
+                }
             }
-        <% } %>
+        %>
         document.getElementById('totalPrice').textContent = total.toFixed(2);
-        updateSubmitButton(hasSeats);
+        const reserveBtn = document.getElementById('reserveBtn');
+        if (reserveBtn) {
+            reserveBtn.disabled = !hasSeats;
+        }
     }
 
     function updateSubmitButton(hasSeats) {
         let passeportInput = document.getElementById('passeport');
-        let reserveBtn = document.querySelector('.reserve-btn');
-        let isFileSelected = passeportInput.files && passeportInput.files.length > 0;
-        reserveBtn.disabled = !(hasSeats && isFileSelected);
+        let reserveBtn = document.getElementById('reserveBtn');
+        let isFileSelected = passeportInput && passeportInput.files && passeportInput.files.length > 0;
+        if (reserveBtn) {
+            reserveBtn.disabled = !(hasSeats && isFileSelected);
+        }
     }
 
     function submitReservation() {
@@ -153,18 +165,24 @@
         let passeportInput = document.getElementById('passeport');
         let params = [];
 
-        <% for (VolSiege volSiege : volSieges) { %>
-            let input_<%= volSiege.getTypeSiege().getId() %> = document.querySelector('input[name="nombre_<%= volSiege.getTypeSiege().getId() %>"]');
-            if (input_<%= volSiege.getTypeSiege().getId() %> && parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value) > 0) {
-                params.push('<%= volSiege.getTypeSiege().getId() %>:' + parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value));
+        <% 
+            if (volSieges != null && !volSieges.isEmpty()) {
+                for (VolSiege volSiege : volSieges) {
+        %>
+                    const input_<%= volSiege.getTypeSiege().getId() %> = document.querySelector('input[name="nombre_<%= volSiege.getTypeSiege().getId() %>"]');
+                    if (input_<%= volSiege.getTypeSiege().getId() %> && parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value) > 0) {
+                        params.push('<%= volSiege.getTypeSiege().getId() %>:' + parseInt(input_<%= volSiege.getTypeSiege().getId() %>.value));
+                    }
+        <% 
+                }
             }
-        <% } %>
+        %>
 
         if (params.length === 0) {
             alert("Veuillez sélectionner au moins une place à réserver.");
             return;
         }
-        if (!passeportInput.files || passeportInput.files.length === 0) {
+        if (!passeportInput || !passeportInput.files || passeportInput.files.length === 0) {
             alert("Veuillez téléverser une image de votre passeport.");
             return;
         }
@@ -182,9 +200,12 @@
     }
 
     // Ajouter des écouteurs pour activer/désactiver le bouton
-    document.getElementById('passeport').addEventListener('change', function() {
-        updateTotal();
-    });
+    const passeportInput = document.getElementById('passeport');
+    if (passeportInput) {
+        passeportInput.addEventListener('change', function() {
+            updateTotal();
+        });
+    }
 
     // Appeler updateTotal au chargement pour initialiser l'état du bouton
     document.addEventListener('DOMContentLoaded', updateTotal);

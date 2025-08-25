@@ -199,7 +199,6 @@ public class Reservation {
         ResultSet res = null;
         boolean creatingConn = false;
         List<Reservation> reservations = new ArrayList<>();
-        List<Reservation> tempReservations = new ArrayList<>();
 
         try {
             if (conn == null) {
@@ -220,29 +219,7 @@ public class Reservation {
                 temp.addTypeSiegeAndNombre(TypeSiege.getById(conn, res.getInt("id_typeSiege")), res.getInt("nombre"));
                 temp.setDate(res.getTimestamp("date"));
                 temp.setPasseport(res.getBytes("passeport"));
-                tempReservations.add(temp);
-            }
-
-            // Regrouper les réservations par id_vol et date
-            for (Reservation temp : tempReservations) {
-                boolean merged = false;
-                for (Reservation reservation : reservations) {
-                    if (reservation.getVol().getId() == temp.getVol().getId() &&
-                        reservation.getUtilisateur().getId() == temp.getUtilisateur().getId() &&
-                        reservation.getDate().equals(temp.getDate())) {
-                        reservation.getTypeSieges().addAll(temp.getTypeSieges());
-                        reservation.getNombres().addAll(temp.getNombres());
-                        // Conserver le passeport du premier enregistrement (supposé identique pour la même réservation)
-                        if (reservation.getPasseport() == null && temp.getPasseport() != null) {
-                            reservation.setPasseport(temp.getPasseport());
-                        }
-                        merged = true;
-                        break;
-                    }
-                }
-                if (!merged) {
-                    reservations.add(temp);
-                }
+                reservations.add(temp);
             }
 
             return reservations;
