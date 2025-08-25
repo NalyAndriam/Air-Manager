@@ -20,7 +20,8 @@
             </a>             
             <ul class="submenu">                 
                 <li><a href="<%= request.getContextPath() %>/settings/reservation" class="current">Reservation</a></li>                 
-                <li><a href="<%= request.getContextPath() %>/settings/promotion">Promotion</a></li>             
+                <li><a href="<%= request.getContextPath() %>/settings/promotion">Promotion</a></li>     
+                <li><a href="<%= request.getContextPath() %>/settings/promotion-alea">Promotion avec date</a></li>        
             </ul>         
         </div>     
         <div class="menu-item"> 

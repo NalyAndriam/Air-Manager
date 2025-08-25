@@ -119,7 +119,8 @@ label i {
 }
 
 input[type="number"],
-select {
+select,
+input[type="date"] {
     width: 100%;
     padding: 12px 15px;
     border: 1px solid #ddd;
@@ -130,7 +131,8 @@ select {
 }
 
 input[type="number"]:focus,
-select:focus {
+select:focus,
+input[type="date"]:focus {
     outline: none;
     border-color: #d32f2f;
     box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.15);
