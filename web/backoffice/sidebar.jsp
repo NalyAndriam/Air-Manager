@@ -12,7 +12,13 @@
                 <li><a href="<%= request.getContextPath() %>/vol/insert" class="current">Insertion</a></li>                 
                 <li><a href="<%= request.getContextPath() %>/vol">Liste</a></li>             
             </ul>         
-        </div>                   
+        </div>  
+        <div class="menu-item"> 
+            <a href="<%= request.getContextPath() %>/vol/promo">                 
+                <i class="fa-solid fa-plane-departure menu-icon"></i>                 
+                <span class="menu-text">Liste Reservations</span>             
+            </a> 
+        </div>                 
         <div class="menu-item has-submenu">             
             <a href="#">                 
                 <i class="fa-solid fa-gear menu-icon"></i>                 

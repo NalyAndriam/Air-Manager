@@ -18,6 +18,7 @@ import model.Avion;
 import model.Database;
 import model.PrixVol;
 import model.Promotion;
+import model.ReservationPromo;
 import model.TypeSiege;
 import model.Ville;
 import model.Vol;
@@ -446,6 +447,46 @@ public class VolController {
                     mv.setUrl("/backoffice/error.jsp"); // Redirect to error.jsp
                     e.printStackTrace();
                     return mv;
+                }
+            }
+        }
+
+        return mv;
+    }
+
+    @Get
+    @Url("/vol/promo")
+    public ModelView showlistResa() throws Exception {
+        Connection conn = null;
+        ModelView mv = new ModelView();
+
+        try {
+            conn = Database.getConnection();
+            System.out.println("Connexion à la base de données établie pour /resa");
+
+            List<ReservationPromo> reservationsPromo = ReservationPromo.getAll(conn);
+            System.out.println("haha");
+
+            mv.addObject("reservationsPromo", reservationsPromo);
+            mv.setUrl("/backoffice/promoReservation.jsp");
+
+        } catch (SQLException e) {
+            mv.addObject("errorMessage", "Erreur SQL lors de la récupération des réservations promotionnelles : " + e.getMessage());
+            mv.setUrl("/backoffice/error.jsp");
+            e.printStackTrace();
+        } catch (Exception e) {
+            mv.addObject("errorMessage", "Erreur inattendue : " + e.getClass().getName() + " - " + e.getMessage());
+            mv.setUrl("/backoffice/error.jsp");
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                    System.out.println("Connexion fermée pour /resa");
+                } catch (SQLException e) {
+                    mv.addObject("errorMessage", "Erreur lors de la fermeture de la connexion : " + e.getMessage());
+                    mv.setUrl("/backoffice/error.jsp");
+                    e.printStackTrace();
                 }
             }
         }
